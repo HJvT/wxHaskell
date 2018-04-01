@@ -1,5 +1,5 @@
 name:         wxcore
-version:      0.92.0.0
+version:      0.93.0.0
 license:      OtherLicense
 license-file: LICENSE
 author:       Daan Leijen
@@ -16,9 +16,10 @@ description:
   LICENSE file, but note that this is essentially LGPL with an
   exception allowing binary distribution of proprietary software.
   This is the same license as wxWidgets itself uses.
-homepage:     http://haskell.org/haskellwiki/WxHaskell
+homepage:     https://wiki.haskell.org/WxHaskell
+bug-reports:  https://sourceforge.net/p/wxhaskell/bugs/
 
-cabal-version: >= 1.2
+cabal-version: >= 1.24
 build-type:    Custom
 
 extra-tmp-files:
@@ -33,6 +34,9 @@ flag splitBase
   default:      True
 
 library
+  default-language:
+    Haskell2010
+
   hs-source-dirs:
     src/haskell
 
@@ -86,3 +90,14 @@ library
       array >= 0.1 && < 0.3,
       base >= 3 && < 4,
       containers >= 0.1 && < 0.3
+
+  ghc-options: -Wall
+
+
+custom-setup
+  setup-depends:
+    base,
+    Cabal,
+    process,
+    directory,
+    filepath

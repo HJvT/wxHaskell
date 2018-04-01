@@ -15,11 +15,15 @@ module Main where
 import Control.Exception (onException)
 import Graphics.UI.WX 
 
+import Paths_samplesWx
+
+
 main :: IO ()
 main
   = start imageViewer
 
 -- Specify image files for the file open dialog.
+imageFiles :: [(String, [String])]
 imageFiles
    = [("Image files",["*.bmp","*.jpg","*.gif","*.png"])
      ,("Portable Network Graphics (*.png)",["*.png"])
@@ -33,7 +37,8 @@ imageFiles
 imageViewer :: IO ()
 imageViewer
   = do -- the main frame, we use 'fullRepaintOnResize' to prevent flicker on resize
-       f      <- frame [text := "ImageViewer", picture := "../bitmaps/eye.ico", fullRepaintOnResize := False]
+       image_ <- getDataFileName "bitmaps/eye.ico"
+       f      <- frame [text := "ImageViewer", picture := image_, fullRepaintOnResize := False]
 
        -- use a mutable variable to hold the image
        vbitmap <- variable [value := Nothing]
@@ -55,8 +60,10 @@ imageViewer
 
        -- create Toolbar
        tbar   <- toolBar f []
-       toolMenu tbar open  "Open"  "../bitmaps/fileopen16.png" []
-       toolMenu tbar about "About" "../bitmaps/wxwin16.png"    []
+       foimg  <- getDataFileName "bitmaps/fileopen16.png"
+       abimg  <- getDataFileName "bitmaps/wxwin16.png"
+       _      <- toolMenu tbar open  "Open"  foimg []
+       _      <- toolMenu tbar about "About" abimg []
 
        -- create statusbar field
        status <- statusField   [text := "Welcome to the wxHaskell ImageViewer"]
@@ -110,7 +117,7 @@ imageViewer
            repaint sw
        `onException` repaint sw
 
-    onPaint vbitmap dc viewArea
+    onPaint vbitmap dc _viewArea
       = do mbBitmap <- get vbitmap value
            case mbBitmap of
              Nothing -> return () 

@@ -122,10 +122,12 @@ EWXWEXPORT(int,ELJLog_GetVerbose)(ELJLog* self)
 	return (int)self->GetVerbose();
 }
 	
+#if !wxCHECK_VERSION(3, 1, 0)
 EWXWEXPORT(int,ELJLog_GetTraceMask)(ELJLog* self)
 {
 	return (int)self->GetTraceMask();
 }
+#endif
 	
 EWXWEXPORT(bool,ELJLog_IsAllowedTraceMask)(ELJLog* self,void* mask)
 {

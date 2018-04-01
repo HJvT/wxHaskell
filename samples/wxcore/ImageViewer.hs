@@ -6,13 +6,18 @@ module Main where
 import Control.Exception( onException )
 import Graphics.UI.WXCore
 
+import Paths_samplesWxcore
+
+
 defaultWidth,defaultHeight :: Int
 defaultWidth  = 300
 defaultHeight = 300
 
+main :: IO ()
 main
   = run imageViewer
 
+imageViewer :: IO ()
 imageViewer
   = do -- variable that holds the current bitmap
        vbitmap <- varCreate Nothing
@@ -30,14 +35,15 @@ imageViewer
 
        -- create menu bar
        m  <- menuBarCreate 0
-       menuBarAppend m fm "&File"
+       _  <- menuBarAppend m fm "&File"
 
        -- create top frame
        f  <- frameCreateTopFrame "Image Viewer"
        windowSetClientSize f (sz defaultWidth defaultHeight)
 
        -- coolness: set a custom icon
-       topLevelWindowSetIconFromFile f "../bitmaps/eye.ico"
+       eyecon <- getDataFileName "bitmaps/eye.ico"
+       topLevelWindowSetIconFromFile f eyecon
 
        -- put a scrolled window inside the frame to paint the image on
        -- note that 'wxNO_FULL_REPAINT_ON_RESIZE'  is needed to prevent flicker on resize.
@@ -54,7 +60,7 @@ imageViewer
        evtHandlerOnMenuCommand f wxID_EXIT  (onQuit f)
        windowAddOnDelete f (close f vbitmap)
        -- show it
-       windowShow f
+       _ <- windowShow f
        windowRaise f
 
        return ()
@@ -63,7 +69,7 @@ imageViewer
       = infoDialog f "About 'Image Viewer'" "This is a wxHaskell demo"
 
     onQuit f
-      = do windowClose f True {- force close -}
+      = do _ <- windowClose f True {- force close -}
            return ()
 
     onOpen f vbitmap fm s
@@ -99,19 +105,19 @@ imageViewer
 
     onClose f vbitmap fm s
       = do close f vbitmap
-           menuEnable fm wxID_CLOSE False
+           _ <- menuEnable fm wxID_CLOSE False
            -- explicitly delete the old bitmap
            withClientDC s dcClear
            -- and than reset the scrollbars
            scrolledWindowSetScrollbars s 1 1 0 0 0 0 False
 
-    close f vbitmap
+    close _f vbitmap
       = do mbBitmap <- varSwap vbitmap Nothing
            case mbBitmap of
              Nothing -> return ()
              Just bm -> bitmapDelete bm
 
-    onPaint vbitmap dc viewArea
+    onPaint vbitmap dc _viewArea
       = do mbBitmap <- varGet vbitmap
            case mbBitmap of
              Nothing -> return ()

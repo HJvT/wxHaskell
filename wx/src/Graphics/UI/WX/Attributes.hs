@@ -1,12 +1,13 @@
 {-# LANGUAGE ExistentialQuantification #-}
 --------------------------------------------------------------------------------
-{-| Module      :  Attributes
-    Copyright   :  (c) Daan Leijen 2003
-    License     :  wxWindows
+{-|
+Module      :  Attributes
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-    Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-    Stability   :  provisional
-    Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 
 Widgets @w@ can have attributes of type @a@ represented by the type 'Attr' @w a@.
@@ -82,6 +83,7 @@ module Graphics.UI.WX.Attributes
     ) where
 
 import Graphics.UI.WX.Types
+import Control.Monad (void)
 import Data.Dynamic
 
 infixr 0 :=,:~,::=,::~
@@ -141,7 +143,7 @@ castProps :: (v -> w) -> [Prop w] -> [Prop v]
 castProps coerce props
   = map (castProp coerce) props
 
--- | Create a /reflective/ attribute with a specified name: value can possibly
+-- | Create a /reflective/ attribute with a specified name: value can possibly be
 -- retrieved using 'getPropValue'. Note: the use of this function is discouraged
 -- as it leads to non-compositional code.
 reflectiveAttr :: Typeable a => String -> (w -> IO a) -> (w -> a -> IO ()) -> Attr w a
@@ -150,7 +152,7 @@ reflectiveAttr name getter setter
   where
     updater w f   = do x <- getter w; setter w (f x); return x
 
--- | Create a /reflective/ attribute with a specified name: value can possibly
+-- | Create a /reflective/ attribute with a specified name: value can possibly be
 -- retrieved using 'getPropValue'. Note: the use of this function is discouraged
 -- as it leads to non-compositional code.
 createAttr :: Typeable a => String -> (w -> IO a) -> (w -> a -> IO ()) -> CreateAttr w a
@@ -174,22 +176,22 @@ newAttr name getter setter
 -- | Define a read-only attribute.
 readAttr :: String -> (w -> IO a) -> ReadAttr w a
 readAttr name getter
-  = newAttr name getter (\w x -> ioError (userError ("attribute '" ++ name ++ "' is read-only.")))
+  = newAttr name getter (\_w _x -> ioError (userError ("attribute '" ++ name ++ "' is read-only.")))
 
 -- | Define a write-only attribute.
 writeAttr :: String -> (w -> a -> IO ()) -> WriteAttr w a
 writeAttr name setter
-  = newAttr name (\w -> ioError (userError ("attribute '" ++ name ++ "' is write-only."))) setter
+  = newAttr name (\_w -> ioError (userError ("attribute '" ++ name ++ "' is write-only."))) setter
 
 -- | A dummy attribute.
 nullAttr :: String -> WriteAttr w a
 nullAttr name
-  = writeAttr name (\w x -> return ())
+  = writeAttr name (\_w _x -> return ())
 
 -- | A constant attribute.
 constAttr :: Typeable a => String -> a -> Attr w a
 constAttr name x
-  = newAttr name (\w -> return x) (\w x -> return ())
+  = newAttr name (\_w -> return x) (\_w _x -> return ())
 
 
 -- | (@mapAttr get set attr@) maps an attribute of @Attr w a@ to
@@ -197,11 +199,11 @@ constAttr name x
 -- requested and (@set :: a -> b -> a@) is applied to current
 -- value when the attribute is set.
 mapAttr :: (a -> b) -> (a -> b -> a) -> Attr w a -> Attr w b
-mapAttr get set (Attr name reflect getter setter updater)
+mapAttr get' set' (Attr name _reflect getter setter updater)
     = Attr name Nothing
-                (\w   -> do a <- getter w; return (get a))
-                (\w b -> do a <- getter w; setter w (set a b))
-                (\w f -> do a <- updater w (\a -> set a (f (get a))); return (get a)) 
+                (\w   -> do a <- getter w; return (get' a))
+                (\w b -> do a <- getter w; setter w (set' a b))
+                (\w f -> do a <- updater w (\a -> set' a (f (get' a))); return (get' a)) 
 
 -- | (@mapAttrW conv attr@) maps an attribute of @Attr w a@ to
 -- @Attr v a@ where (@conv :: v -> w@) is used to convert a widget
@@ -215,7 +217,7 @@ mapAttrW f attr
 -- > t <- get w text
 --
 get :: w -> Attr w a -> IO a
-get w (Attr name reflect getter setter updater)
+get w (Attr _name _reflect getter _setter _updater)
   = getter w
 
 -- | Set a list of properties.
@@ -226,18 +228,18 @@ set :: w -> [Prop w] -> IO ()
 set w props
   = mapM_ setprop props
   where
-    setprop ((Attr name reflect getter setter updater) := x)
+    setprop ((Attr _name _reflect _getter  setter _updater) := x)
       = setter w x
-    setprop ((Attr name reflect getter setter updater) :~ f)
-      = do updater w f; return ()
-    setprop ((Attr name reflect getter setter updater) ::= f)
+    setprop ((Attr _name _reflect _getter _setter  updater) :~ f)
+      = void $ updater w f
+    setprop ((Attr _name _reflect _getter  setter _updater) ::= f)
       = setter w (f w)
-    setprop ((Attr name reflect getter setter updater) ::~ f)
-      = do updater w (f w); return ()
+    setprop ((Attr _name _reflect _getter _setter  updater) ::~ f)
+      = void $ updater w (f w)
 
 -- | Set the value of an attribute and return the old value.
 swap :: w -> Attr w a -> a -> IO a
-swap w (Attr name reflect getter setter updater) x
+swap w (Attr _name _reflect _getter _setter updater) x
   = updater w (const x)
 
 -- | Retrieve the name of an attribute
@@ -247,10 +249,10 @@ attrName (Attr name _ _ _ _)
 
 -- | Retrieve the name of a property.
 propName :: Prop w -> String
-propName (attr := x)    = attrName attr
-propName (attr :~ f)    = attrName attr
-propName (attr ::= f)   = attrName attr
-propName (attr ::~ f)   = attrName attr
+propName (attr :=  _x)   = attrName attr
+propName (attr :~  _f)   = attrName attr
+propName (attr ::= _f)   = attrName attr
+propName (attr ::~ _f)   = attrName attr
 
 
 -- | Is a certain property in a list of properties?
@@ -270,9 +272,9 @@ data PropValue a  = PropValue  a
                   | PropNone
 
 instance Show a => Show (PropValue a) where
-  show (PropValue x)  = "PropValue " ++ show x
-  show (PropModify f) = "PropModify"
-  show (PropNone)     = "PropNone"
+  show (PropValue x)   = "PropValue " ++ show x
+  show (PropModify _f) = "PropModify"
+  show (PropNone)      = "PropNone"
 
 -- | Retrieve the value of a property and the list with the property removed.
 filterProperty :: Typeable a => Attr w a -> [Prop w] -> (PropValue a, [Prop w])
@@ -281,13 +283,13 @@ filterProperty (Attr name _ _ _ _) props
   where
     -- Daan: oh, how a simple thing like properties can result into this... ;-)
     walk :: Typeable a => [Prop w] -> PropValue a -> [Prop w] -> (PropValue a, [Prop w])
-    walk acc res props
-      = case props of
+    walk acc res props'
+      = case props' of
           -- Property setter found.
-          (((Attr attr (Just (todyn,fromdyn)) _ _ _) := x):rest)  | name == attr
+          (((Attr attr (Just (todyn, _fromdyn)) _ _ _) := x):rest)  | name == attr
               -> case fromDynamic (todyn x) of
-                   Just x  -> walk acc (PropValue x) rest
-                   Nothing -> walk acc res props
+                   Just y  -> walk acc (PropValue y) rest
+                   Nothing -> walk acc res props'
                    
           -- Property modifier found.
           (((Attr attr (Just (todyn,fromdyn)) _ _ _) :~ f):rest)  | name == attr
@@ -302,17 +304,17 @@ filterProperty (Attr name _ _ _ _) props
                       PropNone     -> walk acc (PropModify dynf) rest
 
           -- Property found, but with the wrong arguments
-          (((Attr attr _ _ _ _) := _):rest)   | name == attr  -> stop
-          (((Attr attr _ _ _ _) :~ _):rest)   | name == attr  -> stop
-          (((Attr attr _ _ _ _) ::= _):rest)  | name == attr  -> stop
-          (((Attr attr _ _ _ _) ::~ _):rest)  | name == attr  -> stop
+          (((Attr attr _ _ _ _) :=  _) : _rest) | name == attr  -> stop
+          (((Attr attr _ _ _ _) :~  _) : _rest) | name == attr  -> stop
+          (((Attr attr _ _ _ _) ::= _) : _rest) | name == attr  -> stop
+          (((Attr attr _ _ _ _) ::~ _) : _rest) | name == attr  -> stop
 
           -- Defaults
           (prop:rest)
               -> walk (prop:acc) res rest
           []  -> stop
        where
-        stop  = (res, reverse acc ++ props)
+        stop  = (res, reverse acc ++ props')
   
                
 -- | Try to find a property value and call the contination function with that value
@@ -325,13 +327,13 @@ withProperty attr def cont props
       (PropModify f, ps) -> cont (f def) ps
       (PropNone, ps)     -> cont def ps
 
--- | Try to find a property value. Return |Nothing| if not found at all.
+-- | Try to find a property value. Return @Nothing@ if not found at all.
 findProperty :: Typeable a => Attr w a -> a -> [Prop w] -> Maybe (a,[Prop w])
 findProperty attr def props
   = case filterProperty attr props of
       (PropValue x, ps)  -> Just (x,ps)
       (PropModify f, ps) -> Just (f def,ps)
-      (PropNone, ps)     -> Nothing
+      (PropNone, _ps)    -> Nothing
 
 
 
@@ -340,7 +342,7 @@ withStyleProperty :: Attr w Bool -> Style -> ([Prop w] -> Style -> a) -> [Prop w
 withStyleProperty prop flag 
   = withStylePropertyEx prop (bitsSet flag) (\isSet style -> if isSet then (style .+. flag) else (style .-. flag)) 
 
--- | Transform the properties based on a style property. The flag is interpreted negatively, i.e. |True|
+-- | Transform the properties based on a style property. The flag is interpreted negatively, i.e. @True@
 -- removes the bit instead of setting it.
 withStylePropertyNot :: Attr w Bool -> Style -> ([Prop w] -> Style -> a) -> [Prop w] -> Style -> a
 withStylePropertyNot prop flag 

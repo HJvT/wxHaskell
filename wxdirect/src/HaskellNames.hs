@@ -1,12 +1,13 @@
 -----------------------------------------------------------------------------------------
-{-| Module      :  HaskellNames
+{-| 
+    Module      :  HaskellNames
     Copyright   :  (c) Daan Leijen 2003
     License     :  BSD-style
-
+    
     Maintainer  :  wxhaskell-devel@lists.sourceforge.net
     Stability   :  provisional
     Portability :  portable
-
+    
     Utility module to create Haskell compatible names.
 -}
 -----------------------------------------------------------------------------------------
@@ -156,13 +157,14 @@ isBuiltin name
 getPrologue :: String -> String -> String -> [String] -> [String]
 getPrologue moduleName content contains inputFiles
   = [line
-    ,"{-|\tModule      :  " ++ moduleName
-    ,"\tCopyright   :  Copyright (c) Daan Leijen 2003, 2004"
-    ,"\tLicense     :  wxWidgets"
+    ,"{-|"
+    ,"Module      :  " ++ moduleName
+    ,"Copyright   :  Copyright (c) Daan Leijen 2003, 2004"
+    ,"License     :  wxWindows"
     ,""
-    ,"\tMaintainer  :  wxhaskell-devel@lists.sourceforge.net"
-    ,"\tStability   :  provisional"
-    ,"\tPortability :  portable"
+    ,"Maintainer  :  wxhaskell-devel@lists.sourceforge.net"
+    ,"Stability   :  provisional"
+    ,"Portability :  portable"
     ,""
     ,"Haskell " ++ content ++ " definitions for the wxWidgets C library (@wxc.dll@)."
     ,""
@@ -183,9 +185,13 @@ getPrologue moduleName content contains inputFiles
     line = replicate 80 '-'
 
     showFile fname
-         = ["","  * @" ++ concatMap escapeSlash fname ++ "@"]
+         = ["","  * @" ++ removeDirName fname ++ "@"]
 
+    removeDirName = reverse . takeWhile (/= '\\') . takeWhile (/= '/') . reverse
+    
+{-
     escapeSlash c
          | c == '/'   = "\\/"
          | c == '\"'  = "\\\""
          | otherwise  = [c]
+-}

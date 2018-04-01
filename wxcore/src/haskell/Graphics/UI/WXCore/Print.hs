@@ -1,13 +1,14 @@
 -----------------------------------------------------------------------------------------
-{-|	Module      :  Print
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  Print
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
-Printer abstraction layer. See @samples/wx/Print.hs@ for a demo.
+Printer abstraction layer. See @samples\/wx\/Print.hs@ for a demo.
 
 The application should create a 'pageSetupDialog' to hold the printer
 settings of the user.
@@ -54,7 +55,6 @@ module Graphics.UI.WXCore.Print( -- * Printing
                                , pageSetupDialogGetFrame
                                ) where
 
-import Graphics.UI.WXCore.WxcDefs
 import Graphics.UI.WXCore.WxcClasses
 import Graphics.UI.WXCore.WxcClassInfo
 import Graphics.UI.WXCore.Types
@@ -85,10 +85,10 @@ onPrint :: Bool {- preview? -}
 onPrint isPreview pageInfo printOut pageRangeFunction printFunction ev 
   = case ev of
       PrintPrepare ->
-        do{ printOutInitPageRange printOut pageInfo pageRangeFunction
-          ; return ()
-          }
-      PrintPage cancel dc n ->
+        printOutInitPageRange printOut pageInfo pageRangeFunction >>
+        return ()
+
+      PrintPage _cancel dc n ->
         do{ printInfo <- printOutGetPrintInfo printOut
           ; let io info size = printFunction pageInfo info size dc n 
           ; if isPreview 
@@ -134,11 +134,11 @@ printableArea pageInfo printInfo
         bottom= ppmmH * (max minY (toDouble mbottom))
         right = ppmmW * (max minX (toDouble mright))
 
-	dw = round (right + left)
-	dh = round (bottom + top)
-	(dw', dh') = if sizeW (printPageSize printInfo) < sizeH (printPageSize printInfo)
-		     then (dw, dh)
-		     else (dh, dw)
+        dw = round (right + left)
+        dh = round (bottom + top)
+        (dw', dh') = if sizeW (printPageSize printInfo) < sizeH (printPageSize printInfo)
+                     then (dw, dh)
+                     else (dh, dw)
 
         -- the actual printable page size
         printSize = sz (sizeW (printPageSize printInfo) - dw') 
@@ -147,7 +147,7 @@ printableArea pageInfo printInfo
 
 -- | Get the zoom factor from the preview 
 getPreviewZoom :: PageInfo -> PrintInfo -> DC a -> IO (Double,Double)
-getPreviewZoom pageInfo printInfo dc
+getPreviewZoom _pageInfo printInfo dc
   = do size <- dcGetSize dc
        let (printW,printH)   = pixelToMM (printerPPI printInfo) (printPageSize printInfo)
            (screenW,screenH) = pixelToMM (screenPPI printInfo) size
@@ -202,18 +202,18 @@ printDialog :: PageSetupDialog a
           -> PageFunction
           -> PrintFunction 
           -> IO ()
-printDialog pageSetupDialog title pageRangeFunction printFunction =
-  do{ pageSetupData    <- pageSetupDialogGetPageSetupData pageSetupDialog
+printDialog pageSetupDialog' title pageRangeFunction printFunction =
+  do{ pageSetupData    <- pageSetupDialogGetPageSetupData pageSetupDialog'
     ; printData        <- pageSetupDialogDataGetPrintData pageSetupData
     ; printDialogData  <- printDialogDataCreateFromData printData
     ; printDialogDataSetAllPages printDialogData True 
     ; printer          <- printerCreate printDialogData
     ; printout         <- wxcPrintoutCreate title
     ; pageInfo         <- pageSetupDataGetPageInfo pageSetupData
-    ; printOutInitPageRange printout pageInfo pageRangeFunction
+    ; _                <- printOutInitPageRange printout pageInfo pageRangeFunction
     ; printOutOnPrint printout (onPrint False pageInfo printout pageRangeFunction printFunction)
-    ; frame            <- pageSetupDialogGetFrame pageSetupDialog
-    ; printerPrint printer frame printout True {- show printer setup? -}
+    ; frame            <- pageSetupDialogGetFrame pageSetupDialog'
+    ; _                <- printerPrint printer frame printout True {- show printer setup? -}
     ; objectDelete printDialogData
     ; objectDelete printout
     ; objectDelete printer
@@ -225,24 +225,24 @@ printPreview :: PageSetupDialog a
            -> PageFunction
            -> PrintFunction
            -> IO ()
-printPreview pageSetupDialog title pageRangeFunction printFunction =
-  do{ pageSetupData <- pageSetupDialogGetPageSetupData pageSetupDialog
+printPreview pageSetupDialog' title pageRangeFunction printFunction =
+  do{ pageSetupData <- pageSetupDialogGetPageSetupData pageSetupDialog'
     ; pageInfo      <- pageSetupDataGetPageInfo pageSetupData
     ; printout1     <- wxcPrintoutCreate "Print to preview"
     ; printout2     <- wxcPrintoutCreate "Print to printer"
     ; startPage     <- printOutInitPageRange printout1 pageInfo pageRangeFunction
-    ;                  printOutInitPageRange printout2 pageInfo pageRangeFunction
+    ; _             <- printOutInitPageRange printout2 pageInfo pageRangeFunction
     ; printOutOnPrint printout1 (onPrint True  pageInfo printout1 pageRangeFunction printFunction)
     ; printOutOnPrint printout2 (onPrint False pageInfo printout2 pageRangeFunction printFunction)
     ; printData        <- pageSetupDialogDataGetPrintData pageSetupData
     ; printDialogData  <- printDialogDataCreateFromData printData
     ; printDialogDataSetAllPages printDialogData True 
     ; preview      <- printPreviewCreateFromDialogData printout1 printout2 printDialogData
-    ; printPreviewSetCurrentPage preview startPage
-    ; frame        <- pageSetupDialogGetFrame pageSetupDialog
+    ; _            <- printPreviewSetCurrentPage preview startPage
+    ; frame        <- pageSetupDialogGetFrame pageSetupDialog'
     ; previewFrame <- previewFrameCreate preview frame title rectNull frameDefaultStyle title
     ; previewFrameInitialize previewFrame
-    ; windowShow previewFrame 
+    ; _            <- windowShow previewFrame 
     ; windowRaise previewFrame
     }
 
@@ -264,8 +264,8 @@ printOutInitPageRange printOut pageInfo pageRangeFunction
 
 -- | Get the parent frame of a 'PageSetupDialog'.
 pageSetupDialogGetFrame :: PageSetupDialog a -> IO (Frame ())
-pageSetupDialogGetFrame pageSetupDialog
-  = do p <- windowGetParent pageSetupDialog 
+pageSetupDialogGetFrame pageSetupDialog'
+  = do p <- windowGetParent pageSetupDialog' 
        case (safeCast p classFrame) of
         Just frame  -> return frame
         Nothing     -> do w <- wxcAppGetTopWindow
@@ -291,17 +291,16 @@ pageSetupDialog f margin
                     newInfo = pageInfo{ pageArea = rectBetween p0 p1 }
                 pageSetupDataSetPageInfo pageSetupData newInfo
         else return ()                                                                                           
-       pageSetupDialog <- pageSetupDialogCreate f pageSetupData
+       pageSetupDialog' <- pageSetupDialogCreate f pageSetupData
        prev <- windowGetOnClose f
-       windowOnClose f (do{ objectDelete pageSetupDialog; prev })
+       windowOnClose f (do{ objectDelete pageSetupDialog'; prev })
        objectDelete pageSetupData
-       return pageSetupDialog
+       return pageSetupDialog'
 
 -- | Show the page setup dialog
 pageSetupShowModal :: PageSetupDialog a -> IO ()
 pageSetupShowModal p
-  = do dialogShowModal p
-       return ()
+  = dialogShowModal p >> return ()
 
 {--------------------------------------------------------------------------
   PageInfo and PrintInfo

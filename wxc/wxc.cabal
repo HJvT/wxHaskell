@@ -1,5 +1,5 @@
 name:         wxc
-version:      0.92.0.0
+version:      0.93.0.0
 license:      OtherLicense
 license-file: LICENSE
 maintainer:   wxhaskell-devel@lists.sourceforge.net
@@ -16,9 +16,10 @@ description:
   exception allowing binary distribution of proprietary software.
   This is the same license as wxWidgets itself uses.
 
-homepage:     http://haskell.org/haskellwiki/WxHaskell
+homepage:      https://wiki.haskell.org/WxHaskell
+bug-reports:   https://sourceforge.net/p/wxhaskell/bugs/
 
-cabal-version: >= 1.2
+cabal-version: >= 1.24
 build-type:    Custom
 
 extra-source-files:
@@ -93,6 +94,7 @@ extra-source-files:
     src/cpp/eljregion.cpp
     src/cpp/eljregioniter.cpp
     src/cpp/eljsash.cpp
+    src/cpp/eljsplash.cpp
     src/cpp/eljscrollbar.cpp
     src/cpp/eljscrolledwindow.cpp
     src/cpp/eljsingleinst.cpp
@@ -115,11 +117,14 @@ extra-source-files:
     src/cpp/eljwizard.cpp
     src/cpp/ewxw_main.cpp
     src/cpp/extra.cpp
+    src/cpp/stream.cpp
     src/cpp/glcanvas.cpp
     src/cpp/graphicscontext.cpp
+    src/cpp/hyperlinkctrl.cpp
     src/cpp/image.cpp
     src/cpp/managed.cpp
     src/cpp/mediactrl.cpp
+    src/cpp/pickerctrl.cpp
     src/cpp/previewframe.cpp
     src/cpp/printout.cpp
     src/cpp/sckaddr.cpp
@@ -133,8 +138,14 @@ extra-source-files:
     src/cpp/treectrl.cpp
     src/cpp/wrapper.cpp
 
+extra-tmp-files:
+    src/include/wxc_def.h
+
 
 library
+  -- Just to suppress warnings
+  default-language:
+    Haskell2010
 
   include-dirs:
     src/include
@@ -143,10 +154,13 @@ library
     dragimage.h
     eljgrid.h
     ewxw_def.h
+    stream.h
     graphicscontext.h
     glcanvas.h
+    hyperlinkctrl.h
     managed.h
     mediactrl.h
+    pickerctrl.h
     previewframe.h
     printout.h
     sound.h
@@ -157,10 +171,12 @@ library
     wxc.h
     wxc_glue.h
     wxc_types.h
+    wxc_def.h
 
   build-depends:
-    base >= 4 && < 5,
-    wxdirect >= 0.90.1.1
+    base >= 4.6 && < 5,
+    wxdirect >= 0.90.1.1,
+    split > 0
 
   x-dll-sources:
     src/cpp/apppath.cpp
@@ -234,6 +250,7 @@ library
     src/cpp/eljregion.cpp
     src/cpp/eljregioniter.cpp
     src/cpp/eljsash.cpp
+    src/cpp/eljsplash.cpp
     src/cpp/eljscrollbar.cpp
     src/cpp/eljscrolledwindow.cpp
     src/cpp/eljsingleinst.cpp
@@ -256,11 +273,14 @@ library
     src/cpp/eljwizard.cpp
     src/cpp/ewxw_main.cpp
     src/cpp/extra.cpp
+    src/cpp/stream.cpp
     src/cpp/glcanvas.cpp
     src/cpp/graphicscontext.cpp
+    src/cpp/hyperlinkctrl.cpp
     src/cpp/image.cpp
     src/cpp/managed.cpp
     src/cpp/mediactrl.cpp
+    src/cpp/pickerctrl.cpp
     src/cpp/previewframe.cpp
     src/cpp/printout.cpp
     src/cpp/sckaddr.cpp
@@ -273,7 +293,23 @@ library
     src/cpp/treectrl.cpp
     src/cpp/wrapper.cpp
 
+  if impl(ghc > 7.10.2 && < 8)
+    cc-options: "-std=gnu++11" -Wno-deprecated-declarations
+    
+  if impl(ghc >= 8)
+    cc-options: "-std=gnu++14" -Wno-deprecated-declarations
+    
   x-dll-name: wxc
 
   x-dll-extra-libraries:
 
+
+custom-setup
+  setup-depends: 
+    base, 
+    Cabal >= 2.2 && < 2.3,
+    bytestring,
+    split,
+    process,
+    directory,
+    filepath

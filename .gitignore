@@ -20,6 +20,7 @@ WxcClassesMZ.hs
 
 # Dist directory
 dist/
+dist-newstyle/
 
 # cabal-dev
 cabal-dev/
@@ -33,6 +34,7 @@ Thumbs.db
 
 # Backups created by editors
 *.bak
+*.swp
 
 # Cabal sandbox directory and config file
 .cabal-sandbox/

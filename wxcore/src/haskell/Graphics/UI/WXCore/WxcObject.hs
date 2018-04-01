@@ -1,12 +1,13 @@
 {-# LANGUAGE CPP, ForeignFunctionInterface #-}
 -----------------------------------------------------------------------------------------
-{-|	Module      :  WxcObject
-	Copyright   :  (c) Daan Leijen 2003, 2004
-	License     :  wxWindows
+{-|
+Module      :  WxcObject
+Copyright   :  (c) Daan Leijen 2003, 2004
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Basic object type.
 -}
@@ -18,16 +19,11 @@ module Graphics.UI.WXCore.WxcObject(
             , withObjectPtr
             , objectFinalize, objectNoFinalize
             -- * Managed objects
-            , ManagedPtr, TManagedPtr, CManagedPtr
+            , ManagedPtr, TManagedPtr, CManagedPtr(..)
             ) where
 
-import Control.Exception 
 import System.IO.Unsafe( unsafePerformIO )
-import Foreign.C
 import Foreign.Ptr
-import Foreign.Storable
-import Foreign.Marshal.Alloc
-import Foreign.Marshal.Array
 
 {- note: for GHC 6.10.2 or higher, recommends to use "import Foreign.Concurrent"
    See http://www.haskell.org/pipermail/cvs-ghc/2009-January/047120.html -}
@@ -123,8 +119,8 @@ objectNull
 objectIsManaged :: Object a -> Bool
 objectIsManaged obj
   = case obj of
-      Managed fp -> True
-      _          -> False
+      Managed _fp -> True
+      _           -> False
 
 -- | Test for null object.
 objectIsNull :: Object a -> Bool
@@ -154,14 +150,14 @@ withObjectPtr obj f
 objectFinalize :: Object a -> IO ()
 objectFinalize obj
   = case obj of
-      Object p   -> return ()
+      Object _p  -> return ()
       Managed fp -> withForeignPtr fp $ wxManagedPtr_Finalize
                           
 -- | Remove the finalizer on a managed object. (No effect on unmanaged objects.)
 objectNoFinalize :: Object a -> IO ()
 objectNoFinalize obj
   = case obj of
-      Object p   -> return ()
+      Object  _p -> return ()
       Managed fp -> withForeignPtr fp $ wxManagedPtr_NoFinalize
 
 

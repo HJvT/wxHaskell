@@ -1,11 +1,12 @@
 -----------------------------------------------------------------------------------------
-{-|	Module      :  Defines
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  Defines
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Exports standard /defines/ of wxWidgets.
 -}
@@ -91,13 +92,13 @@ getAbsoluteFilePath fname
         then return fname
         else do appdir <- getApplicationDir
                 let appdirfname = appdir </> fname
-                exist  <- doesFileExist appdirfname
-                if exist
+                appdirfnameExists  <- doesFileExist appdirfname
+                if appdirfnameExists
                  then return appdirfname
                  else do cwd <- getCurrentDirectory 
                          let cwdfname = cwd </> fname
-                         exist <- doesFileExist cwdfname
-                         if exist
+                         cwdfnameExists <- doesFileExist cwdfname
+                         if cwdfnameExists
                           then return cwdfname
                           else return fname
 
@@ -107,7 +108,7 @@ dirSep :: String
 dirSep
   = case wxToolkit of
       WxMSW   -> "\\"
-      other   -> "/"
+      _other  -> "/"
 
 {-# DEPRECATED pathSep "Use System.FilePath module's searchPathSeparator instead" #-}
 -- | deprecated: Use System.FilePath module\'s 'searchPathSeparator' instead.
@@ -115,5 +116,5 @@ pathSep :: String
 pathSep
   = case wxToolkit of
       WxMSW   -> ";"
-      other   -> ":"
+      _other  -> ":"
 

@@ -1,13 +1,14 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses, DeriveDataTypeable #-}
 --------------------------------------------------------------------------------
-{-| Module      :  Controls
-    Copyright   :  (c) Daan Leijen 2003
-                   (c) Shelarcy (shelarcy@gmail.com) 2006
-    License     :  wxWindows
+{-| 
+Module      :  Controls
+Copyright   :  (c) Daan Leijen 2003
+               (c) Shelarcy (shelarcy@gmail.com) 2006
+License     :  wxWindows
 
-    Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-    Stability   :  provisional
-    Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Defines common GUI controls.
 -}
@@ -73,27 +74,31 @@ module Graphics.UI.WX.Controls
       , StyledTextCtrl, stcEvent, styledTextCtrl, styledTextCtrlEx
       -- ** PropertyGrid
       , PropertyGrid, propertyGrid, propertyGridEvent
+      
+      , CSingleListBox(..) -- Just to prevent a "Defined but not used: data constructor..." message
+      , CMultiListBox(..)  -- Just to prevent a "Defined but not used: data constructor..." message
     ) where
 
-import Graphics.UI.WXCore hiding (Event)
+import Prelude            hiding (id)
+import Graphics.UI.WXCore hiding (column, Event, rect)
 
-import Graphics.UI.WX.Types
+import Graphics.UI.WX.Types   hiding (rect)
 import Graphics.UI.WX.Attributes
-import Graphics.UI.WX.Classes
+import Graphics.UI.WX.Classes hiding (parent, size)
 import Graphics.UI.WX.Events
-import Graphics.UI.WX.Layout
+import Graphics.UI.WX.Layout  hiding (column)
 import Graphics.UI.WX.Media (Media(..))
 import Graphics.UI.WX.Variable (variable)
 import Graphics.UI.WX.Window
 
 import Control.Monad (forM_)
-import Control.Applicative
-import Data.Maybe (fromMaybe, isJust, fromJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Dynamic  -- for "alignment"
-import Data.Time
+import Data.Time   hiding (utc)
 import System.Info (os)
 
 
+defaultStyle :: Int
 defaultStyle
   = wxCLIP_CHILDREN -- .+. wxNO_FULL_REPAINT_ON_RESIZE
 
@@ -101,7 +106,7 @@ defaultStyle
 -- controls. It has a standard background and maintains standard keyboard
 -- navigation (ie. /Tab/ moves through the controls).
 --
--- Note: 'defaultButton' attibute is removed. Set 'defaultButton' to parent
+-- Note: the 'defaultButton' attribute is removed. Set 'defaultButton' to parent
 -- 'Frame' or 'Dialog' instead of this control now. This is an incompatible
 -- change to support wxWidgets 2.8.x.
 --
@@ -117,7 +122,7 @@ panel parent props
 
 -- | Create a 'Panel' with a specific style.
 --
--- Note: 'defaultButton' attibute is removed. Set 'defaultButton' to parent
+-- Note: the 'defaultButton' attribute is removed. Set 'defaultButton' to parent
 -- 'Frame' or 'Dialog' instead of this control now. This is an incompatible
 -- change to support wxWidgets 2.8.x.
 --
@@ -127,12 +132,12 @@ panel parent props
 --             'Able', 'Tipped', 'Identity', 'Styled',
 --             'Textual', 'Literate', 'Reactive', 'Paint'
 panelEx :: Window a -> Style -> [Prop (Panel ())] -> IO (Panel ())
-panelEx parent style props
-  = feed2 props style $
-    initialContainer $ \id rect -> \props flags  ->
+panelEx parent style_ props
+  = feed2 props style_ $
+    initialContainer $ \id rect -> \props_ flags  ->
     do p <- panelCreate parent id rect flags
        windowSetFocus p
-       set p props
+       set p props_
        return p
 
 instance Form (Panel a) where
@@ -153,9 +158,9 @@ focusOn w
 notebook :: Window a -> [Prop (Notebook ())] -> IO (Notebook ())
 notebook parent props
   = feed2 props defaultStyle $
-    initialContainer $ \id rect -> \props flags ->
-    do nb <- notebookCreate parent id rect flags
-       set nb props
+    initialContainer $ \id rect' -> \props_ flags ->
+    do nb <- notebookCreate parent id rect' flags
+       set nb props_
        return nb
 
 {--------------------------------------------------------------------------------
@@ -191,9 +196,9 @@ buttonEx :: Window a -> Style -> [Prop (Button ())] -> IO (Button ())
 buttonEx parent stl props
   = feed2 props stl $
     initialWindow $ \id rect ->
-    initialText   $ \txt -> \props flags ->
+    initialText   $ \txt -> \props' flags ->
     do b <- buttonCreate parent id txt rect flags
-       set b props
+       set b props'
        return b
 
 -- | Complete the construction of a push button instance which has been loaded
@@ -220,9 +225,9 @@ instance Commanding (Button a) where
 bitmapButton :: Window a -> [Prop (BitmapButton ())] -> IO (BitmapButton ())
 bitmapButton parent props
   = feed2 props 0 $
-    initialWindow $ \id rect -> \props flags ->
+    initialWindow $ \id rect -> \props' flags ->
     do bb <- bitmapButtonCreate parent id nullBitmap rect flags
-       set bb props
+       set bb props'
        windowReLayout bb
        return bb
 
@@ -283,11 +288,11 @@ class Aligned w where
   alignment :: CreateAttr w Align
 
 initialAlignment :: Aligned w => ([Prop w] -> Style -> a) -> [Prop w] -> Style -> a
-initialAlignment cont props style
+initialAlignment cont props style_
   = case filterProperty alignment props of
-      (PropValue x, ps)  -> cont ps (setBitMask x style)
-      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style)) style)
-      (PropNone, ps)     -> cont ps style
+      (PropValue x, ps)  -> cont ps (setBitMask x style_)
+      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style_)) style_)
+      (PropNone, ps)     -> cont ps style_
 
 
 instance Aligned (TextCtrl a) where
@@ -306,11 +311,13 @@ class Wrapped w where
   -- | Set the wrap mode of a widget.
   wrap :: CreateAttr w Wrap
 
-initialWrap cont props style
+initialWrap :: Wrapped w =>
+               ([Prop w] -> Int -> p) -> [Prop w] -> Int -> p
+initialWrap cont props style_
   = case filterProperty wrap props of
-      (PropValue x, ps)  -> cont ps (setBitMask x style)
-      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style)) style)
-      (PropNone, ps)     -> cont ps style
+      (PropValue x, ps)  -> cont ps (setBitMask x style_)
+      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style_)) style_)
+      (PropNone, ps)     -> cont ps style_
 
 instance Wrapped (TextCtrl a) where
   wrap
@@ -334,10 +341,12 @@ instance Able (TextCtrl a) where
 -- Workaround for Unexpected TextCtrl behaviour (https://github.com/jodonoghue/wxHaskell/issues/1#issuecomment-5202439)
 -- Problem arises from the fact that wxTE_RICH is needed only on Windows platforms, but is essential there. However, on
 -- wxMac > 2.9, wxTE_RICH seems not to be ignored as the documentation claims.
+getRichTE :: Int
 getRichTE =  if (os == "mingw32") || (os == "win32")
              then wxTE_RICH
              else 0
 
+getRichTE2 :: Int
 getRichTE2 = if (os == "mingw32") || (os == "win32")
              then wxTE_RICH2
              else 0
@@ -346,17 +355,17 @@ getRichTE2 = if (os == "mingw32") || (os == "win32")
 -- be set at creation time (or the entry has default alignment (=left) ).
 -- This is an alias for textEntry
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 entry :: Window a -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
 entry parent props
   = textCtrlEx parent getRichTE props
 
--- | Create a single-line text entry control. Note: 'alignment' has to
--- be set at creation time (or the entry has default alignment (=left) ).
+-- | Create a single-line text entry control. Note: 'alignment' can only
+-- be set at creation time (default is left alignment).
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 textEntry :: Window a -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
@@ -364,9 +373,9 @@ textEntry parent props
   = textCtrlEx parent getRichTE props
 
 -- | Create a multi-line text control. Note: the 'wrap' and 'alignment'
--- have to be set at creation time or the default to 'WrapNone' and 'AlignLeft' respectively.
+-- can only be set at creation time, the defaults are 'WrapNone' and 'AlignLeft' respectively.
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 textCtrl :: Window a -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
@@ -377,9 +386,9 @@ textCtrl parent props
 -- | Create a multi-line text rich-text control with a certain wrap mode
 -- Enables font and color settings on windows, while being equal to 'textCtrl'
 -- on other platforms. Note: the 'wrap' and 'alignment'
--- have to be set at creation time or the default to 'WrapNone' and 'AlignLeft' respectively.
+-- can only be set at creation time, the defaults are 'WrapNone' and 'AlignLeft' respectively.
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 textCtrlRich :: Window a -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
@@ -388,7 +397,7 @@ textCtrlRich parent props
 
 -- | Create a generic text control given a certain style.
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 textCtrlEx :: Window a -> Style -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
@@ -397,15 +406,15 @@ textCtrlEx parent stl props
     initialWindow    $ \id rect ->
     initialText      $ \txt ->
     initialWrap      $
-    initialAlignment $ \props flags ->
+    initialAlignment $ \props_ flags ->
     do e <- textCtrlCreate parent id txt rect flags
-       set e props
+       set e props_
        return e
 
 -- | Complete the construction of a text control instance which has been loaded
 --   from a resource file.
 --
--- * Instances: 'Wrap', 'Aligned', 'Commanding' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
+-- * Instances: 'Wrap', 'Aligned', 'Commanding', 'Updating' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 textCtrlRes :: Window a -> String -> [Prop (TextCtrl ())] -> IO (TextCtrl ())
@@ -414,11 +423,14 @@ textCtrlRes parent name props =
        set t props
        return t
 
+instance Updating (TextCtrl a) where
+  update = newEvent "update" controlGetOnText controlOnText
+
 instance Commanding (TextCtrl a) where
   command = newEvent "command" textCtrlGetOnTextEnter textCtrlOnTextEnter
 
 -- | Process @enter@ key events, used in a 'comboBox' or 'textCtrl' and
--- catched using a 'on' 'command' handler.
+-- catched using an 'on' 'command' handler
 -- (otherwise pressing @Enter@ is either processed
 -- internally by the control or used for navigation between dialog controls).
 processEnter :: Styled w => Attr w Bool
@@ -428,7 +440,7 @@ processEnter
     getter w
       = do s <- get w style
            return (bitsSet wxTE_PROCESS_ENTER s)
-    setter w p
+    setter w _p
       = set w [style :~ \stl -> stl .+. wxTE_PROCESS_ENTER]
 
 
@@ -442,7 +454,7 @@ processTab
     getter w
       = do s <- get w style
            return (bitsSet wxTE_PROCESS_TAB s)
-    setter w p
+    setter w _p
       = set w [style :~ \stl -> stl .+. wxTE_PROCESS_TAB]
 
 
@@ -454,9 +466,9 @@ staticText :: Window a -> [Prop (StaticText ())] -> IO (StaticText ())
 staticText parent props
   = feed2 props 0 $
     initialWindow $ \id rect ->
-    initialText   $ \txt -> \props flags ->
+    initialText   $ \txt -> \props_ flags ->
     do t <- staticTextCreate parent id txt rect flags {- (wxALIGN_LEFT + wxST_NO_AUTORESIZE) -}
-       set t props
+       set t props_
        return t
 
 -- | Complete the construction of a static text label instance which has been loaded
@@ -483,7 +495,7 @@ instance IsDate Day where
   -- time zone??
   toWXDate utc = do
     wxd <- dateTimeCreate
-    dateTimeSet wxd (fromInteger y) (m - 1) d 0 0 0 0
+    dateTimeSet wxd d (m - 1) (fromInteger y) 0 0 0 0
     return wxd
     where (y,m,d) = toGregorian utc
   fromWXDate wxd = fromGregorian
@@ -505,10 +517,10 @@ date = createAttr "date" getter setter
 calendarCtrl :: Window a -> [Prop (CalendarCtrl ())] -> IO (CalendarCtrl ())
 calendarCtrl parent props
   = feed2 props 0 $
-    initialWindow $ \id rect -> \props flags ->
+    initialWindow $ \id rect -> \props_ flags ->
     do dt <- dateTimeCreate
        t <- calendarCtrlCreate parent id dt rect flags
-       set t props
+       set t props_
        return t
 
 {--------------------------------------------------------------------------------
@@ -533,9 +545,9 @@ checkBox :: Window a -> [Prop (CheckBox ())] -> IO (CheckBox ())
 checkBox parent props
   = feed2 props 0 $
     initialWindow $ \id rect ->
-    initialText   $ \txt -> \props flags ->
+    initialText   $ \txt -> \props_ flags ->
     do c <- checkBoxCreate parent id txt rect flags
-       set c props
+       set c props_
        return c
 
 -- | Complete the construction of a check box instance which has been loaded
@@ -595,7 +607,7 @@ instance Items (Choice a) String where
     = choiceDelete w i
 
 
--- | Create a choice item to select a one of a list of strings.
+-- | Create a choice item to select one of a list of strings.
 --
 -- * Instances: 'Sorted', 'Selecting','Selection','Items' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
@@ -605,7 +617,7 @@ choice parent props
   = choiceEx parent 0 props
 
 
--- | Create a choice item, given a set of style flags, to select a one of a list of strings
+-- | Create a choice item, given a set of style flags, to select one of a list of strings
 --
 -- * Instances: 'Selecting','Selection','Items' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
@@ -614,9 +626,9 @@ choiceEx :: Window a -> Style -> [Prop (Choice ())] -> IO (Choice ())
 choiceEx parent flags props
   = feed2 props flags $
     initialWindow $ \id rect ->
-    initialSorted $ \props flags ->
-    do c <- choiceCreate parent id rect [] flags
-       set c props
+    initialSorted $ \props' flags' ->
+    do c <- choiceCreate parent id rect [] flags'
+       set c props'
        return c
 
 -- | Complete the construction of a choice instance which has been loaded
@@ -633,6 +645,10 @@ choiceRes parent name props =
 instance Commanding (ComboBox a) where
   command
     = newEvent "command" comboBoxGetOnTextEnter comboBoxOnTextEnter
+
+instance Updating (ComboBox a) where
+  update
+    = newEvent "update" controlGetOnText controlOnText
 
 instance Selecting (ComboBox a) where
   select
@@ -661,7 +677,7 @@ instance Items (ComboBox a) String where
 
 -- | Create a new combo box.
 --
--- * Instances: 'Selecting', 'Commanding','Selection','Items' -- 'Textual', 'Literate', 'Dimensions',
+-- * Instances: 'Selecting', 'Commanding', 'Updating', 'Selection', 'Items' -- 'Textual', 'Literate', 'Dimensions',
 --              'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
@@ -674,7 +690,7 @@ comboBox parent props
 
 -- | Create a new combo box with a given set of flags.
 --
--- * Instances: 'Selecting', 'Commanding','Selection','Items' -- 'Textual', 'Literate', 'Dimensions',
+-- * Instances: 'Selecting', 'Commanding', 'Updating', 'Selection', 'Items' -- 'Textual', 'Literate', 'Dimensions',
 --              'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
@@ -685,9 +701,9 @@ comboBoxEx parent flags props
   = feed2 props flags $
     initialWindow $ \id rect ->
     initialText   $ \txt ->
-    initialSorted $ \props flags ->
-    do cb <- comboBoxCreate parent id txt rect [] flags
-       set cb props
+    initialSorted $ \props' flags' ->
+    do cb <- comboBoxCreate parent id txt rect [] flags'
+       set cb props'
        return cb
 
 -- | Complete the construction of a combo box instance which has been loaded
@@ -769,10 +785,10 @@ singleListBox :: Window a -> [Prop (SingleListBox ())] -> IO (SingleListBox ())
 singleListBox parent props
   = feed2 props (wxLB_SINGLE .+. wxHSCROLL .+. wxLB_NEEDED_SB) $
     initialWindow $ \id rect ->
-    initialSorted $ \props flags ->
+    initialSorted $ \props' flags ->
     do lb <- listBoxCreate parent id rect [] flags
        let sl = (objectCast lb :: SingleListBox ())
-       set sl props
+       set sl props'
        return sl
 
 -- | Complete the construction of a single list box instance which has been loaded
@@ -793,10 +809,10 @@ multiListBox :: Window a -> [Prop (MultiListBox ())] -> IO (MultiListBox ())
 multiListBox parent props
   = feed2 props (wxLB_EXTENDED .+. wxHSCROLL .+. wxLB_NEEDED_SB) $
     initialWindow $ \id rect ->
-    initialSorted $ \props flags ->
+    initialSorted $ \props_ flags ->
     do lb <- listBoxCreate parent id rect [] flags
        let ml = (objectCast lb :: MultiListBox ())
-       set ml props
+       set ml props_
        return ml
 
 -- | Complete the construction of a single list box instance which has been loaded
@@ -817,8 +833,8 @@ data ListBoxView b a = ListBoxView {
     listBoxViewToRow :: a -> String
   }
 
-listBoxViewLayout :: ListBoxView b a -> Layout
-listBoxViewLayout = fill . widget . listBoxViewCtrl
+-- listBoxViewLayout :: ListBoxView b a -> Layout
+-- listBoxViewLayout = fill . widget . listBoxViewCtrl
 
 listBoxViewSetItems :: ListBoxView b a -> [a] -> IO ()
 listBoxViewSetItems list its = do
@@ -893,9 +909,9 @@ radioBox :: Window a -> Orientation -> [String] -> [Prop (RadioBox ())] -> IO (R
 radioBox parent direction labels props
   = feed2 props (if (direction==Horizontal) then wxRA_SPECIFY_ROWS else wxRA_SPECIFY_COLS) $
     initialWindow $ \id rect ->
-    initialText   $ \title -> \props flags ->
+    initialText   $ \title -> \props_ flags ->
     do r <- radioBoxCreate parent id title rect labels 1 flags
-       set r props
+       set r props_
        return r
 
 -- | Complete the construction of a radio box instance which has been loaded
@@ -936,8 +952,8 @@ vgauge parent range props
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 gaugeEx :: Window a -> Int -> Style -> [Prop (Gauge ())] -> IO (Gauge ())
-gaugeEx parent range style props
-  = do g <- gaugeCreate parent idAny range rectNull style
+gaugeEx parent range style_ props
+  = do g <- gaugeCreate parent idAny range rectNull style_
        set g props
        return g
 
@@ -969,26 +985,26 @@ instance Commanding (Slider a) where
   command = newEvent "command" sliderGetOnCommand sliderOnCommand
 
 -- | Create a horizontal slider with a specified minimum and maximum. Set
--- the 'Bool' argument to 'True' to show labels (minimumn, maximum, and
+-- the 'Bool' argument to 'True' to show labels (minimum, maximum, and
 -- current value). The 'selection' attribute gives the current value.
 --
 -- * Instances: 'Commanding','Selection' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 hslider :: Window a -> Bool -> Int -> Int -> [Prop (Slider ())] -> IO (Slider ())
-hslider parent showLabels min max props
-  = sliderEx parent min max (wxHORIZONTAL .+. (if showLabels then wxSL_LABELS else 0)) props
+hslider parent showLabels min_ max_ props
+  = sliderEx parent min_ max_ (wxHORIZONTAL .+. (if showLabels then wxSL_LABELS else 0)) props
 
 -- | Create a vertical slider with a specified minimum and maximum. Set
--- the 'Bool' argument to 'True' to show labels (minimumn, maximum, and
+-- the 'Bool' argument to 'True' to show labels (minimum, maximum, and
 -- current value). The 'selection' attribute gives the current value.
 --
 -- * Instances: 'Commanding','Selection' -- 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child',
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 vslider :: Window a -> Bool -> Int -> Int -> [Prop (Slider ())] -> IO (Slider ())
-vslider parent showLabels min max props
-  = sliderEx parent min max (wxVERTICAL .+. (if showLabels then wxSL_LABELS else 0)) props
+vslider parent showLabels min_ max_ props
+  = sliderEx parent min_ max_ (wxVERTICAL .+. (if showLabels then wxSL_LABELS else 0)) props
 
 -- | Create a slider with a specified minimum and maximum. The
 -- 'selection' attribute gives the current value.
@@ -997,8 +1013,8 @@ vslider parent showLabels min max props
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 sliderEx :: Window a -> Int -> Int -> Style -> [Prop (Slider ())] -> IO (Slider ())
-sliderEx parent min max style props
-  = do s <- sliderCreate parent style min min max rectNull style
+sliderEx parent min_ max_ style_ props
+  = do s <- sliderCreate parent style_ min_ min_ max_ rectNull style_
        set s props
        return s
 
@@ -1039,9 +1055,9 @@ spinCtrl :: Window a -> Int -> Int -> [Prop (SpinCtrl ())] -> IO (SpinCtrl ())
 spinCtrl parent lo hi props
   = feed2 props wxSP_ARROW_KEYS $
     initialWindow $ \id rect ->
-    initialText   $ \txt -> \props flags ->
+    initialText   $ \txt -> \props_ flags ->
     do sc <- spinCtrlCreate parent id txt rect flags (min lo hi) (max lo hi) lo
-       set sc props
+       set sc props_
        return sc
 
 -- | Complete the construction of a spin control instance which has been loaded
@@ -1084,9 +1100,9 @@ instance Selecting (SpinCtrl a) where
 toggleButton :: Window a -> [Prop (ToggleButton ())] -> IO (ToggleButton ())
 toggleButton parent props
   = feed2 props defaultStyle $
-    initialWindow $ \id rect -> \props flags ->
+    initialWindow $ \id rect -> \props_ flags ->
     do bb <- toggleButtonCreate parent id "" rect flags
-       set bb props
+       set bb props_
        return bb
 
 instance Commanding (ToggleButton a) where
@@ -1105,11 +1121,11 @@ instance Checkable (ToggleButton a) where
 bitmapToggleButton :: Window a -> [Prop (BitmapToggleButton ())] -> IO (BitmapToggleButton ())
 bitmapToggleButton parent props
   = feed2 props defaultStyle $
-    initialWindow $ \id rect -> \props flags ->
+    initialWindow $ \id rect -> \props_ flags ->
     do img <- imageCreateFromPixels (Size 1 1) [black]
        bm  <- bitmapCreateFromImage img (-1)
        bb  <- bitmapToggleButtonCreate parent id bm rect flags
-       set bb props
+       set bb props_
        return bb
 
 instance Pictured (BitmapToggleButton a) where
@@ -1148,11 +1164,11 @@ treeCtrl parent props
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 treeCtrlEx :: Window a -> Style -> [Prop (TreeCtrl ())] -> IO (TreeCtrl ())
-treeCtrlEx parent style props
-  = feed2 props style $
-    initialContainer $ \id rect -> \props flags ->
+treeCtrlEx parent style_ props
+  = feed2 props style_ $
+    initialContainer $ \id rect -> \props_ flags ->
     do t <- treeCtrlCreate2 parent id rect flags
-       set t props
+       set t props_
        return t
 
 -- | Complete the construction of a tree control instance which has been loaded
@@ -1180,26 +1196,26 @@ instance Items (ListCtrl a) [String] where
                              mapM (\column -> do listItemSetColumn li (column-1)
                                                  listItemSetId li i
                                                  listItemSetMask li wxLIST_MASK_TEXT
-                                                 listCtrlGetItem l li
+                                                 _ <- listCtrlGetItem l li
                                                  listItemGetText li) [1..count])
 
 
       setter l texts
         = do count <- listCtrlGetItemCount l
-             when (i == count) (do listCtrlInsertItemWithLabel l i (show i) (-1); return ())
+             when (i == count) (do _ <- listCtrlInsertItemWithLabel l i (show i) (-1); return ())
              mapM_ (\(column,txt) -> listCtrlSetItem l i column txt (-1)) (zip [0..] texts)
 
   itemAppend l texts
     = do count <- listCtrlGetItemCount l
-         listCtrlInsertItemWithLabel l count (show count) (-1)
+         _ <- listCtrlInsertItemWithLabel l count (show count) (-1)
          mapM_ (\(column,txt) -> listCtrlSetItem l count column txt (-1)) (zip [0..] texts)
 
   itemDelete l i
-    = do listCtrlDeleteItem l i
+    = do _ <- listCtrlDeleteItem l i
          return ()
 
   itemsDelete l
-    = do listCtrlDeleteAllItems l
+    = do _ <- listCtrlDeleteAllItems l
          return ()
 
 -- | The @columns@ attribute controls the columns in a report-view list control.
@@ -1209,30 +1225,30 @@ columns
   where
     setter l xs
       = do n <- listCtrlGetColumnCount l
-           mapM_ (\c -> listCtrlDeleteColumn l 0) (reverse [1..n])
+           mapM_ (\_c -> listCtrlDeleteColumn l 0) (reverse [1..n])
            mapM_ (insertColumn l) (zip [0..] xs)
       where
-        insertColumn l (idx,(name,align,width))
-          = let alignment = case align of
+        insertColumn l' (idx,(name,align,width))
+          = let alignment' = case align of
                               AlignRight -> wxLIST_FORMAT_RIGHT
                               AlignCentre-> wxLIST_FORMAT_CENTER
-                              other      -> wxLIST_FORMAT_LEFT
-            in listCtrlInsertColumn l idx name alignment width
+                              _other     -> wxLIST_FORMAT_LEFT
+            in listCtrlInsertColumn l' idx name alignment' width
 
     getter l
       = do n <- listCtrlGetColumnCount l
            mapM (getColumn l) [0..n]
       where
-        getColumn l idx
-          = bracket (listCtrlGetColumn2 l idx)
+        getColumn l' idx
+          = bracket (listCtrlGetColumn2 l' idx)
                     (listItemDelete)
-                    (\item -> do name      <- listItemGetText item
-                                 alignment <- listItemGetAlign item
-                                 width     <- listItemGetWidth item
-                                 let align | alignment == wxLIST_FORMAT_RIGHT  = AlignRight
-                                           | alignment == wxLIST_FORMAT_CENTER = AlignCentre
-                                           | otherwise                         = AlignLeft
-                                 return (name,align,width)
+                    (\item_ -> do name       <- listItemGetText  item_
+                                  alignment_ <- listItemGetAlign item_
+                                  width      <- listItemGetWidth item_
+                                  let align | alignment_ == wxLIST_FORMAT_RIGHT  = AlignRight
+                                            | alignment_ == wxLIST_FORMAT_CENTER = AlignCentre
+                                            | otherwise                          = AlignLeft
+                                  return (name,align,width)
                     )
 
 
@@ -1261,11 +1277,11 @@ listCtrl parent props
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 listCtrlEx :: Window a -> Style -> [Prop (ListCtrl ())] -> IO (ListCtrl ())
-listCtrlEx parent style props
-  = feed2 props style $
-    initialContainer $ \id rect -> \props flags ->
+listCtrlEx parent style_ props
+  = feed2 props style_ $
+    initialContainer $ \id rect -> \props_ flags ->
     do l <- listCtrlCreate parent id rect flags
-       set l props
+       set l props_
        return l
 
 -- | Complete the construction of a list control instance which has been loaded
@@ -1286,7 +1302,7 @@ listCtrlSetColumnWidths ctrl w = do
 --  let w = 65 --ceiling $ size / realToFrac cols
   forM_ [0 .. cols - 1] $ \i -> listCtrlSetColumnWidth ctrl i w
 
--- | A small wrapper over WX's ListCtrl, allowing us to keep the data
+-- | A small wrapper over WX's 'ListCtrl', allowing us to keep the data
 --   we're representing as well as its string form (shown to the user as
 --   rows).
 data ListView a = ListView {
@@ -1320,9 +1336,9 @@ listViewAddItem list it = do
   its <- (it:) `fmap` get (listViewItems list) value
   listViewSetItems list its
 
-listViewSetColumnWidths :: ListView a -> Int -> IO ()
-listViewSetColumnWidths list w = do
-  listCtrlSetColumnWidths (listViewCtrl list) w
+-- listViewSetColumnWidths :: ListView a -> Int -> IO ()
+-- listViewSetColumnWidths list w = do
+--   listCtrlSetColumnWidths (listViewCtrl list) w
 
 listView :: Window b -> [String] -> (a -> [String]) -> IO (ListView a)
 listView parent cols toRow = do
@@ -1341,9 +1357,9 @@ listView parent cols toRow = do
 splitterWindow :: Window a -> [Prop (SplitterWindow ())] -> IO (SplitterWindow ())
 splitterWindow parent props
   = feed2 props (defaultStyle .+. wxSP_LIVE_UPDATE) $
-    initialContainer $ \id rect -> \props flags ->
+    initialContainer $ \id rect -> \props_ flags ->
     do s <- splitterWindowCreate parent id rect flags
-       set s props
+       set s props_
        return s
 
 {--------------------------------------------------------------------------------
@@ -1366,16 +1382,16 @@ imageListFromFiles size files
   MediaCtrl
 --------------------------------------------------------------------------------}
 
--- | Optional back-end for your MediaCtrl.
---   If you want to know more about back-end, you must see wxWidgets' Document.
---   <http://www.wxwidgets.org/manuals/stable/wx_wxmediactrl.html#choosingbackendwxmediactrl>
+-- | Optional backend for your MediaCtrl.
+--   If you want to know more about backend, you must see wxWidgets' document:
+--   <http://docs.wxwidgets.org/trunk/classwx_media_ctrl.html#mediactrl_choosing_backend>
 data MediaCtrlBackend =
-      DirectShow            -- ^ Use ActiveMovie\/DirectShow. Default back-end on Windows.
+      DirectShow            -- ^ Use ActiveMovie\/DirectShow. Default backend on Windows.
     | MediaControlInterface -- ^ Use Media Command Interface. Windows Only.
     | WindowsMediaPlayer10  -- ^ Use Windows Media Player 10. Windows Only. Require to use wxWidgets 2.8.x.
     | QuickTime             -- ^ Use QuickTime. Mac Only. 
     | GStreamer             -- ^ Use GStreamer. Unix Only. Require GStreamer and GStreamer Support.
-    | DefaultBackend        -- ^ Use default back-end on your platform.
+    | DefaultBackend        -- ^ Use default backend on your platform.
    deriving (Eq,Show)
 
 fromMediaCtrlBackend :: MediaCtrlBackend -> String
@@ -1390,17 +1406,22 @@ fromMediaCtrlBackend back
 
 -- FIXME: Change wxDirect to Support STRING type in Eiffel file (*.e)
 -- instead of write definition directory here.
+wxMEDIABACKEND_DIRECTSHOW :: String
 wxMEDIABACKEND_DIRECTSHOW = "wxAMMediaBackend"
-wxMEDIABACKEND_MCI = "wxMCIMediaBackend"
-wxMEDIABACKEND_WMP10 = "wxWMP10MediaBackend"
-wxMEDIABACKEND_QUICKTIME = "wxQTMediaBackend"
-wxMEDIABACKEND_GSTREAMER = "wxGStreamerMediaBackend"
+wxMEDIABACKEND_MCI        :: String
+wxMEDIABACKEND_MCI        = "wxMCIMediaBackend"
+wxMEDIABACKEND_WMP10      :: String
+wxMEDIABACKEND_WMP10      = "wxWMP10MediaBackend"
+wxMEDIABACKEND_QUICKTIME  :: String
+wxMEDIABACKEND_QUICKTIME  = "wxQTMediaBackend"
+wxMEDIABACKEND_GSTREAMER  :: String
+wxMEDIABACKEND_GSTREAMER  = "wxGStreamerMediaBackend"
 
 mediaCtrl :: Window a -> [Prop (MediaCtrl ())] -> IO (MediaCtrl ())
 mediaCtrl parent props
   = mediaCtrlEx parent defaultStyle DefaultBackend props
 
--- | Create MediaCtrl with choosing back-end. This is useful to select back-end on
+-- | Create MediaCtrl with choosing backend. This is useful to select backend on
 -- Windows. But if you don't want to cause any effect to other platforms, you must
 -- use wxToolkit or #ifdef macro to choose correct function for platforms.
 -- For example,
@@ -1424,11 +1445,11 @@ mediaCtrlWithBackend parent back props
   = mediaCtrlEx parent defaultStyle back props
 
 mediaCtrlEx :: Window a -> Style -> MediaCtrlBackend -> [Prop (MediaCtrl ())] -> IO (MediaCtrl ())
-mediaCtrlEx parent style back props
-  = feed2 props style $
-    initialContainer $ \id rect -> \props flags ->
-    do s <- mediaCtrlCreate parent id "" rect style (fromMediaCtrlBackend back) ""
-       set s props
+mediaCtrlEx parent style_ back props
+  = feed2 props style_ $
+    initialContainer $ \id rect -> \props' _flags ->
+    do s <- mediaCtrlCreate parent id "" rect style_ (fromMediaCtrlBackend back) ""
+       set s props'
        return s
 
 instance Media (MediaCtrl a) where
@@ -1460,11 +1481,11 @@ wizardPageSize = newAttr "pageSize" getter setter
 chain :: [WizardPageSimple a] -> IO ()
 chain ws = chain1 Nothing ws
   where
-    chain1 pr (w:ws) = do
+    chain1 pr (w:ws') = do
       when (isJust pr) (set w [prev := pr])
-      when (not $ null ws) (set w [next := Just $ head ws])
-      chain1 (Just w) ws
-    chain1 pr [] = return ()
+      when (not $ null ws') (set w [next := Just $ head ws'])
+      chain1 (Just w) ws'
+    chain1 _pr [] = return ()
 
 -- | Create an empty wizard.
 wizard :: Window a -> [Prop (Wizard ())] -> IO (Wizard ())
@@ -1472,12 +1493,12 @@ wizard parent props
   = wizardEx parent (wxCAPTION .-. wxSYSTEM_MENU .-. wxCLOSE_BOX) props
 
 wizardEx :: Window a -> Style -> [Prop (Wizard ())] -> IO (Wizard ())
-wizardEx parent style props
-  = feed2 props style $
+wizardEx parent style_ props
+  = feed2 props style_ $
     initialWindow $ \id rect ->
-    initialText   $ \txt -> \props flags ->
+    initialText   $ \txt -> \props_ _flags ->
     do b <- wizardCreate parent id txt nullBitmap rect
-       set b props
+       set b props_
        return b
 
 -- | Create an empty simple wizard page.
@@ -1500,7 +1521,7 @@ wizardEvent
   = newEvent "wizardEvent" wizardGetOnWizEvent wizardOnWizEvent
  
 -- | Run the wizard.
--- IMPORTANT: `windowDestroy` needs to be called on the wizard when it is no longer used. After
+-- IMPORTANT: `windowDestroy` must be called on the wizard when it is no longer used. After
 -- `windowDestroy` has been called, the wizard or any of its children must not be accessed anymore.
 runWizard :: Wizard a -> WizardPage b -> IO Bool
 runWizard wiz page = wizardRunWizard wiz page >>= return . (/=0)
@@ -1519,11 +1540,11 @@ styledTextCtrl parent props
   = styledTextCtrlEx parent defaultStyle props
 
 styledTextCtrlEx :: Window a -> Style -> [Prop (StyledTextCtrl ())] -> IO (StyledTextCtrl ())
-styledTextCtrlEx parent style props
-  = feed2 props style $
-    initialContainer $ \id rect -> \props flags ->
-    do s <- styledTextCtrlCreate parent id "" rect style
-       set s props
+styledTextCtrlEx parent style_ props
+  = feed2 props style_ $
+    initialContainer $ \id rect -> \props_ _flags ->
+    do s <- styledTextCtrlCreate parent id "" rect style_
+       set s props_
        return s
 
 {--------------------------------------------------------------------------------
@@ -1545,8 +1566,8 @@ propertyGridEvent
 propertyGrid :: Window a -> [Prop (PropertyGrid ())] -> IO (PropertyGrid ())
 propertyGrid parent props
   = feed2 props wxPG_DEFAULT_STYLE $
-    initialContainer $ \id rect -> \props flags ->
+    initialContainer $ \id rect -> \props_ flags ->
     do l <- propertyGridCreate parent id rect flags
-       set l props
+       set l props_
        return l
 

@@ -1,14 +1,15 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 --------------------------------------------------------------------------------
-{-|	Module      :  Timer
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  Timer
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
-Support for milli-second timers.
+Support for millisecond timers.
 -}
 --------------------------------------------------------------------------------
 module Graphics.UI.WX.Timer
@@ -20,14 +21,16 @@ import Graphics.UI.WXCore.Events
 
 import Graphics.UI.WX.Types
 import Graphics.UI.WX.Attributes
-import Graphics.UI.WX.Layout
 import Graphics.UI.WX.Classes
 import Graphics.UI.WX.Events
+
+import Control.Monad (void)
+
 
 {--------------------------------------------------------------------
 
 --------------------------------------------------------------------}
--- | A timer generates a 'command' event on a specified milli-second 'interval'.
+-- | A timer generates a 'command' event on a specified millisecond 'interval'.
 --
 -- * Attributes: 'interval'
 --
@@ -38,13 +41,13 @@ type Timer  = TimerEx ()
 -- | Create a new timer with a 1 second interval. The timer is automatically discarded
 -- when the parent is deleted.
 timer :: Window a -> [Prop Timer] -> IO Timer
-timer parent props
-  = do t <- windowTimerCreate parent
-       timerStart t 1000 False
+timer parent' props
+  = do t <- windowTimerCreate parent'
+       void (timerStart t 1000 False)
        set t props
        return t
 
--- | The milli-second interval of the timer.
+-- | The millisecond interval of the timer.
 interval :: Attr Timer Int
 interval
   = newAttr "timer-interval"
@@ -53,9 +56,8 @@ interval
                   if (runs)
                    then do timerStop t
                            isone <- timerIsOneShot t
-                           timerStart t i isone
-                           return ()
-                   else do timerStart t i True
+                           void $ timerStart t i isone
+                   else do void $ timerStart t i True
                            timerStop t)
 
 instance Able Timer where
@@ -65,8 +67,7 @@ instance Able Timer where
         (\t able -> do runs <- timerIsRuning t
                        when (runs /= able)
                         (if able then do i <- get t interval
-                                         timerStart t i False
-                                         return ()
+                                         void $ timerStart t i False
                                  else do timerStop t))
 
 instance Commanding Timer where

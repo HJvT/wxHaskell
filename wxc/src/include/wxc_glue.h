@@ -638,7 +638,9 @@ void       ELJLog_Flush( TSelf(ELJLog) _obj );
 void       ELJLog_FlushActive( TSelf(ELJLog) _obj );
 void*      ELJLog_GetActiveTarget(  );
 void*      ELJLog_GetTimestamp( TSelf(ELJLog) _obj );
+#if !wxCHECK_VERSION(3, 1, 0)
 int        ELJLog_GetTraceMask( TSelf(ELJLog) _obj );
+#endif
 int        ELJLog_GetVerbose( TSelf(ELJLog) _obj );
 TBool      ELJLog_HasPendingMessages( TSelf(ELJLog) _obj );
 TBool      ELJLog_IsAllowedTraceMask( TSelf(ELJLog) _obj, TClass(wxMask) mask );
@@ -1983,6 +1985,7 @@ int        wxComboBox_GetSelection( TSelf(wxComboBox) _obj );
 TClass(wxString) wxComboBox_GetString( TSelf(wxComboBox) _obj, int n );
 TClass(wxString) wxComboBox_GetStringSelection( TSelf(wxComboBox) _obj );
 TClass(wxString) wxComboBox_GetValue( TSelf(wxComboBox) _obj );
+void       wxComboBox_SetValue( TSelf(wxComboBox) _obj, TClass(wxString) value);
 void       wxComboBox_Paste( TSelf(wxComboBox) _obj );
 void       wxComboBox_Remove( TSelf(wxComboBox) _obj, int from, int to );
 void       wxComboBox_Replace( TSelf(wxComboBox) _obj, int from, int to, TClass(wxString) value );
@@ -3400,6 +3403,7 @@ void       wxImage_ConvertToBitmap( TSelf(wxImage) _obj, TClassRef(wxBitmap) bit
 TByteStringLen wxImage_ConvertToByteString( TSelf(wxImage) _obj, int type, TByteStringOut data  );
 TByteStringLen wxImage_ConvertToLazyByteString( TSelf(wxImage) _obj, int type, TByteStringLazyOut data );
 int        wxImage_CountColours( TSelf(wxImage) _obj, int stopafter );
+void       wxImage_Copy( TSelf(wxImage) _obj, TClassRef(wxImage) image );
 TClass(wxImage) wxImage_CreateDefault(  );
 TClass(wxImage) wxImage_CreateFromBitmap( TClass(wxBitmap) bitmap );
 // TClass(wxImage) wxImage_CreateFromByteString( TByteString(data,length), int type );
@@ -3419,6 +3423,8 @@ TChar      wxImage_GetMaskGreen( TSelf(wxImage) _obj );
 TChar      wxImage_GetMaskRed( TSelf(wxImage) _obj );
 TChar      wxImage_GetRed( TSelf(wxImage) _obj, TPoint(x,y) );
 void       wxImage_GetSubImage( TSelf(wxImage) _obj, TRect(x,y,w,h), TClassRef(wxImage) image );
+int        wxImage_GetType( TSelf(wxImage) _obj );
+void       wxImage_SetType( TSelf(wxImage) _obj ,int type);
 int        wxImage_GetWidth( TSelf(wxImage) _obj );
 TBool      wxImage_HasMask( TSelf(wxImage) _obj );
 TClass(wxString) wxImage_GetOption( TSelf(wxImage) _obj, TClass(wxString) name );
@@ -3427,14 +3433,18 @@ TBool      wxImage_HasOption( TSelf(wxImage) _obj, TClass(wxString) name );
 void       wxImage_Initialize( TSelf(wxImage) _obj, TSize(width,height) );
 void       wxImage_InitializeFromData( TSelf(wxImage) _obj, TSize(width,height), void* data );
 TBool      wxImage_LoadFile( TSelf(wxImage) _obj, TClass(wxString) name, int type );
+TBool      wxImage_LoadStream( TSelf(wxImage) _obj, TClass(wxInputStream) name, int type, int index );
 void       wxImage_Mirror( TSelf(wxImage) _obj, TBoolInt horizontally, TClassRef(wxImage) image );
 TBool      wxImage_IsOk( TSelf(wxImage) _obj );
 void       wxImage_Paste( TSelf(wxImage) _obj, TClass(wxImage) image, TPoint(x,y) );
 void       wxImage_Replace( TSelf(wxImage) _obj, TColorRGB(r1,g1,b1), TColorRGB(r2,g2,b2) );
 void       wxImage_Rescale( TSelf(wxImage) _obj, TSize(width,height) );
+void       wxImage_RescaleEx( TSelf(wxImage) _obj, TSize(width,height), int quality);
 void       wxImage_Rotate( TSelf(wxImage) _obj, double angle, TPoint(c_x,c_y), TBoolInt interpolating, void* offset_after_rotation, TClassRef(wxImage) image );
 void       wxImage_Rotate90( TSelf(wxImage) _obj, TBoolInt clockwise, TClassRef(wxImage) image );
 TBool      wxImage_SaveFile( TSelf(wxImage) _obj, TClass(wxString) name, int type );
+TBool      wxImage_SaveStream( TSelf(wxImage) _obj, TClass(wxOutputStream) stream, int type );
+void       wxImage_ScaleEx( TSelf(wxImage) _obj, TSize(width,height),int quality, TClassRef(wxImage) image );
 void       wxImage_Scale( TSelf(wxImage) _obj, TSize(width,height), TClassRef(wxImage) image );
 void       wxImage_SetData( TSelf(wxImage) _obj, void* data );
 void       wxImage_SetDataAndSize( TSelf(wxImage) _obj, void* data, TSize(new_width,new_height) );
@@ -4826,7 +4836,7 @@ TBool      wxSingleInstanceChecker_IsAnotherRunning( TSelf(wxSingleInstanceCheck
 /* wxSize */
 TClassDef(wxSize)
 TClass(wxSize) wxSize_Create( TSize(w,h) );
-void       wxSize_Destroy( TSelf(wxSize) _obj );
+void       wxSize_Delete( TSelf(wxSize) _obj );
 int        wxSize_GetHeight( TSelf(wxSize) _obj );
 int        wxSize_GetWidth( TSelf(wxSize) _obj );
 void       wxSize_SetHeight( TSelf(wxSize) _obj, int h );
@@ -5004,6 +5014,10 @@ void       wxSpinEvent_SetPosition( TSelf(wxSpinEvent) _obj, int pos );
 
 /* wxSplashScreen */
 TClassDefExtend(wxSplashScreen,wxFrame)
+TClass(wxSplashScreen) wxSplashScreen_Create( TClass(wxBitmap) _bmp, long _sstl, int _ms, TClass(wxWindow) parent, int id, TRect(_lft,_top,_wdt,_hgt), long _stl);
+
+long       wxSplashScreen_GetSplashStyle( TSelf(wxSplashScreen) _obj );
+int        wxSplashScreen_GetTimeout( TSelf(wxSplashScreen) _obj );
 
 /* wxSplitterEvent */
 TClassDefExtend(wxSplitterEvent,wxNotifyEvent)

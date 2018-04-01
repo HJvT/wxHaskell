@@ -2,6 +2,7 @@
 #include "wx/tooltip.h"
 #include "wx/dynlib.h"
 #include "wx/fs_zip.h"
+#include "wx/cmdline.h"
 
 /* quantize is not supported on wxGTK 2.4.0 */
 #if !defined(__WXGTK__) || (wxVERSION_NUMBER > 2400)
@@ -15,17 +16,6 @@
 int copyStrToBuf(void* dst, wxString& src) {
   if (dst) wxStrcpy ((wxChar*) dst, src.c_str());
   return src.Length();
-}
-
-void initImageHandlers()
-{
-  static int InitImageHandlers_done = 0;
-
-  // if (!InitImageHandlers_done) // HJvT: Temporarily disabled
-  {
-    InitImageHandlers_done = 1;
-    wxInitAllImageHandlers();
-  }
 }
 
 /*-----------------------------------------------------------------------------
@@ -70,7 +60,6 @@ bool ELJApp::OnInit (void)
   if (!wxApp::OnInit())
     return false;
 
-  initImageHandlers();
   initIdleTimer();
   if (initClosure) {
     delete initClosure; /* special: init is only called once with a NULL event */
@@ -98,7 +87,7 @@ void ELJApp::InitZipFileSystem()
 
 void ELJApp::InitImageHandlers()
 {
-  initImageHandlers();
+  wxInitAllImageHandlers();
 }
 
 
@@ -116,6 +105,18 @@ void ELJApp::HandleEvent(wxEvent& _evt)
   else if (callback) {
     callback->Invoke( &_evt );  /* normal: invoke the callback function */
   }
+}
+
+/* override to prevent parent wxApp failing to parse Haskell cmdline args */
+void ELJApp::OnInitCmdLine(wxCmdLineParser& parser)
+{
+  parser.SetCmdLine("");
+}
+
+/* override to prevent parent wxApp from further processing of parsed cmdline */
+bool ELJApp::OnCmdLineParsed(wxCmdLineParser& parser)
+{
+  return true;
 }
 
 /*-----------------------------------------------------------------------------
@@ -237,11 +238,16 @@ EWXWEXPORT(wxClosure*,wxEvtHandler_GetClosure)(wxEvtHandler* evtHandler,int id,i
   //knows we just want to know the closure. Unfortunately, this
   //seems the cleanest way to retrieve the callback in wxWidgets.
   getCallback = &callback;
+
+#if wxCHECK_VERSION(3, 1, 0)
+  #pragma GCC warning "wxEvtHandler_GetClosure must be studied carefully for wxWidgets >= 3.1.0, 'class wxEvtHandler' has no member named 'GetDynamicEventTable' anymore"
+#else
   // Bugfix: see www.mail-archive.com/wxhaskell-devel@lists.sourceforge.net/msg00577.html
   // On entry, Dynamic event table may have no bound events
   // Bug reproduces only on Debug builds, and seems to be ignorable
   if (evtHandler->GetDynamicEventTable() != NULL)
     found = evtHandler->SearchDynamicEventTable( event );
+#endif
   getCallback = NULL;
 
   if (found && callback)
@@ -459,7 +465,7 @@ EWXWEXPORT(void,ELJApp_SetTooltipDelay)(int _ms)
 
 EWXWEXPORT(void,ELJApp_InitAllImageHandlers)()
 {
-  initImageHandlers();
+  wxInitAllImageHandlers();
 }
 
 EWXWEXPORT(void,ELJApp_Bell)()

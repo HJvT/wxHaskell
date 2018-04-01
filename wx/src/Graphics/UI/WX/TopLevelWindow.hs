@@ -1,12 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 --------------------------------------------------------------------------------
-{-|	Module      :  TopLevelWindow
-	Copyright   :  (c) Jeremy O'Donoghue, 2007
-	License     :  wxWindows
+{-|
+Module      :  TopLevelWindow
+Copyright   :  (c) Jeremy O'Donoghue, 2007
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 wxTopLevelwindow (wxWidgets >= 2.8.0) defines an (abstract) common base class
 for wxFrame and wxDialog.
@@ -28,14 +29,12 @@ module Graphics.UI.WX.TopLevelWindow
       , initialCloseable
     ) where
 
-import Graphics.UI.WXCore
+import Graphics.UI.WXCore hiding (win)
 
-import Graphics.UI.WX.Types
 import Graphics.UI.WX.Attributes
 import Graphics.UI.WX.Classes
 import Graphics.UI.WX.Layout
-import Graphics.UI.WX.Window
-import Graphics.UI.WX.Events
+import Graphics.UI.WX.Window() -- Import instances alone
 
 -- The default control activated by return key
 instance HasDefault (TopLevelWindow a) where
@@ -104,8 +103,8 @@ windowMaximizeable
     getFlag w
       = do s <- get w style
            return (bitsSet wxMAXIMIZE_BOX s)
-    setFlag w max
-      = set w [style :~ \stl -> if max then stl .+. wxMAXIMIZE_BOX else stl .-. wxMAXIMIZE_BOX]
+    setFlag w max_
+      = set w [style :~ \stl -> if max_ then stl .+. wxMAXIMIZE_BOX else stl .-. wxMAXIMIZE_BOX]
 
 -- | Helper function that transforms the style accordding
 -- to the 'windowMaximizable' flag in of the properties
@@ -123,8 +122,8 @@ windowMinimizeable
     getFlag w
       = do s <- get w style
            return (bitsSet wxMINIMIZE_BOX s)
-    setFlag w min
-      = set w [style :~ \stl -> if min then stl .+. wxMINIMIZE_BOX else stl .-. wxMINIMIZE_BOX]
+    setFlag w min_
+      = set w [style :~ \stl -> if min_ then stl .+. wxMINIMIZE_BOX else stl .-. wxMINIMIZE_BOX]
 
 -- | Helper function that transforms the style accordding
 -- to the 'windowMinimizable' flag in of the properties
@@ -142,8 +141,8 @@ windowCloseable
     getFlag w
       = do s <- get w style
            return (bitsSet wxCLOSE_BOX s)
-    setFlag w min
-      = set w [style :~ \stl -> if min then stl .+. wxCLOSE_BOX else stl .-. wxCLOSE_BOX]
+    setFlag w min_
+      = set w [style :~ \stl -> if min_ then stl .+. wxCLOSE_BOX else stl .-. wxCLOSE_BOX]
 
 -- | Helper function that transforms the style accordding
 -- to the 'windowMinimizable' flag in of the properties

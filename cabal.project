@@ -1,0 +1,10 @@
+packages:
+  wxdirect/
+  wxc/
+  wxcore/
+  wx/
+  samples/wxcore/
+  samples/wx/
+  samples/contrib/
+  samples/test/
+  ObjectName-1.1.0.1/

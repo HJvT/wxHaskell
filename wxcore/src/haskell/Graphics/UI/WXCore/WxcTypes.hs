@@ -1,13 +1,15 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, DeriveDataTypeable #-}
+{-# LANGUAGE CPP, ForeignFunctionInterface, DeriveDataTypeable, FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_HADDOCK prune #-}
 -----------------------------------------------------------------------------------------
-{-|	Module      :  WxcTypes
-	Copyright   :  (c) Daan Leijen 2003, 2004
-	License     :  wxWindows
+{-|
+Module      :  WxcTypes
+Copyright   :  (c) Daan Leijen 2003, 2004
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Basic types and marshalling code for the wxWidgets C library.
 -}
@@ -88,38 +90,39 @@ module Graphics.UI.WXCore.WxcTypes(
             , withRefDateTime, withManagedDateTimeResult
             , withRefGridCellCoordsArray, withManagedGridCellCoordsArrayResult
 
-
             -- ** Primitive types
             -- *** CString
-            , CString(..), withCString, withStringResult
-            , CWString(..), withCWString, withWStringResult
+            , CString, withCString, withStringResult
+            , CWString, withCWString, withWStringResult
             -- *** ByteString
             , withByteStringResult, withLazyByteStringResult
             -- *** CInt
             , CInt(..), toCInt, fromCInt, withIntResult
             -- *** IntPtr
-            , IntPtr(..)
+            , IntPtr
             -- *** CIntPtr
-            , CIntPtr(..), toCIntPtr, fromCIntPtr, withIntPtrResult
+            , CIntPtr, toCIntPtr, fromCIntPtr, withIntPtrResult
             -- *** Word
-            , Word(..)
+            , Word
             -- *** 8 bit Word
-            , Word8(..)
+            , Word8
             -- *** 64 bit Integer
-            , Int64(..)
+            , Int64
             -- *** CDouble
             , CDouble(..), toCDouble, fromCDouble, withDoubleResult
             -- *** CChar
-            , CChar(..), toCChar, fromCChar, withCharResult
+            , CChar, toCChar, fromCChar, withCharResult
             , CWchar(..), toCWchar
             -- *** CBool
             , CBool(..), toCBool, fromCBool, withBoolResult
             -- ** Pointers
-            , Ptr(..), ptrNull, ptrIsNull, ptrCast, ForeignPtr, FunPtr, toCFunPtr
+            , Ptr, ptrNull, ptrIsNull, ptrCast, ForeignPtr, FunPtr, toCFunPtr
             ) where
 
+#include "wxc_def.h"
+
 import Control.Exception 
-import System.IO.Unsafe( unsafePerformIO )
+import Data.Ix
 import Foreign.C
 import Foreign.Ptr
 import Foreign.Storable
@@ -130,10 +133,7 @@ import Foreign.Marshal.Utils (fromBool, toBool)
 {- note: for GHC 6.10.2 or higher, recommends to use "import Foreign.Concurrent"
    See http://www.haskell.org/pipermail/cvs-ghc/2009-January/047120.html -}
 import Foreign.ForeignPtr hiding (newForeignPtr,addForeignPtrFinalizer)
-import Foreign.Concurrent
 
-import Data.Array.MArray (MArray)
-import Data.Array.Unboxed (IArray, UArray)
 import Data.Bits( shiftL, shiftR, (.&.), (.|.) )
 
 import qualified Data.ByteString as B
@@ -225,6 +225,33 @@ data (Num a) => Point2 a = Point
         }
         deriving (Eq,Show,Read,Typeable)
 
+-- Moved from Types.hs at 2015-09-01
+instance (Num a, Ord a) => Ord (Point2 a) where
+  compare (Point x1 y1) (Point x2 y2)             
+    = case compare y1 y2 of
+        EQ  -> compare x1 x2
+        neq -> neq
+
+-- Moved from Types.hs at 2015-09-01
+instance Ix (Point2 Int) where
+  range (Point x1 y1,Point x2 y2)             
+    = [Point x y | y <- [y1..y2], x <- [x1..x2]]
+
+  inRange (Point x1 y1, Point x2 y2) (Point x y)
+    = (x >= x1 && x <= x2 && y >= y1 && y <= y2)
+
+  rangeSize (Point x1 y1, Point x2 y2) 
+    = let w = abs (x2 - x1) + 1
+          h = abs (y2 - y1) + 1
+      in w*h
+
+  index bnd@(Point x1 y1, Point x2 _y2) p@(Point x y)
+    = if inRange bnd p
+       then let w = abs (x2 - x1) + 1
+            in (y-y1)*w + x
+       else error ("Point index out of bounds: " ++ show p ++ " not in " ++ show bnd)
+
+
 -- | Construct a point.
 point :: (Num a) => a -> a -> Point2 a
 point x y  = Point x y
@@ -267,8 +294,8 @@ withPointResult f
        return (fromCPoint x y)
 
 toCIntPointX, toCIntPointY :: Point2 Int -> CInt
-toCIntPointX (Point x y)  = toCInt x
-toCIntPointY (Point x y)  = toCInt y
+toCIntPointX (Point x _y)  = toCInt x
+toCIntPointY (Point _x y)  = toCInt y
 
 fromCPoint :: CInt -> CInt -> Point2 Int
 fromCPoint x y
@@ -288,8 +315,8 @@ withPointDoubleResult f
        return (fromCPointDouble x y)
 
 toCDoublePointX, toCDoublePointY :: Point2 Double -> CDouble
-toCDoublePointX (Point x y)  = toCDouble x
-toCDoublePointY (Point x y)  = toCDouble y
+toCDoublePointX (Point x _y) = toCDouble x
+toCDoublePointY (Point _x y) = toCDouble y
 
 fromCPointDouble :: CDouble -> CDouble -> Point2 Double
 fromCPointDouble x y
@@ -304,10 +331,10 @@ data CWxPointObject a  = CWxPointObject
 
 withWxPointResult :: IO (Ptr (TWxPoint a)) -> IO (Point2 Int)
 withWxPointResult io
-  = do pt <- io
-       x  <- wxPoint_GetX pt
-       y  <- wxPoint_GetY pt
-       wxPoint_Delete pt
+  = do poynt <- io
+       x  <- wxPoint_GetX poynt
+       y  <- wxPoint_GetY poynt
+       wxPoint_Delete poynt
        return (fromCPoint x y)
 
 foreign import ccall wxPoint_Delete :: Ptr (TWxPoint a) -> IO ()
@@ -328,10 +355,12 @@ data (Num a) => Size2D a = Size
         }
         deriving (Eq,Show,Typeable)
 
+{-
 -- | Construct a size from a width and height.
 size :: (Num a) => a -> a -> Size2D a
 size w h
   = Size w h
+-}
 
 -- | Short function to construct a size
 sz :: (Num a) => a -> a -> Size2D a
@@ -375,8 +404,8 @@ fromCSize w h
   = Size (fromCInt w) (fromCInt h)
 
 toCIntSizeW, toCIntSizeH :: Size -> CInt
-toCIntSizeW (Size w h)  = toCInt w
-toCIntSizeH (Size w h)  = toCInt h
+toCIntSizeW (Size w _h) = toCInt w
+toCIntSizeH (Size _w h) = toCInt h
 
 withCSizeDouble :: Size2D Double -> (CDouble -> CDouble -> IO a) -> IO a
 withCSizeDouble (Size w h) f
@@ -396,8 +425,8 @@ fromCSizeDouble w h
   = Size (fromCDouble w) (fromCDouble h)
 
 toCDoubleSizeW, toCDoubleSizeH :: Size2D Double -> CDouble
-toCDoubleSizeW (Size w h)  = toCDouble w
-toCDoubleSizeH (Size w h)  = toCDouble h
+toCDoubleSizeW (Size w _h) = toCDouble w
+toCDoubleSizeH (Size _w h) = toCDouble h
 
 {-
 -- | A @wxSize@ object.
@@ -408,10 +437,10 @@ data CWxSizeObject a  = CWxSizeObject
 
 withWxSizeResult :: IO (Ptr (TWxSize a)) -> IO Size
 withWxSizeResult io
-  = do sz <- io
-       w  <- wxSize_GetWidth  sz
-       h  <- wxSize_GetHeight sz
-       wxSize_Delete sz
+  = do size <- io
+       w  <- wxSize_GetWidth  size
+       h  <- wxSize_GetHeight size
+       wxSize_Delete size
        return (fromCSize w h)
 
 foreign import ccall wxSize_Delete    :: Ptr (TWxSize a) -> IO ()
@@ -475,8 +504,8 @@ withVectorResult f
        return (fromCVector x y)
 
 toCIntVectorX, toCIntVectorY :: Vector -> CInt
-toCIntVectorX (Vector x y)  = toCInt x
-toCIntVectorY (Vector x y)  = toCInt y
+toCIntVectorX (Vector x _y) = toCInt x
+toCIntVectorY (Vector _x y) = toCInt y
 
 fromCVector :: CInt -> CInt -> Vector
 fromCVector x y
@@ -496,8 +525,8 @@ withVectorDoubleResult f
        return (fromCVectorDouble x y)
 
 toCDoubleVectorX, toCDoubleVectorY :: Vector2 Double -> CDouble
-toCDoubleVectorX (Vector x y)  = toCDouble x
-toCDoubleVectorY (Vector x y)  = toCDouble y
+toCDoubleVectorX (Vector x _y) = toCDouble x
+toCDoubleVectorY (Vector _x y) = toCDouble y
 
 fromCVectorDouble :: CDouble -> CDouble -> Vector2 Double
 fromCVectorDouble x y
@@ -506,10 +535,10 @@ fromCVectorDouble x y
 
 withWxVectorResult :: IO (Ptr (TWxPoint a)) -> IO Vector
 withWxVectorResult io
-  = do pt <- io
-       x  <- wxPoint_GetX pt
-       y  <- wxPoint_GetY pt
-       wxPoint_Delete pt
+  = do poynt <- io
+       x  <- wxPoint_GetX poynt
+       y  <- wxPoint_GetY poynt
+       wxPoint_Delete poynt
        return (fromCVector x y)
 
 
@@ -531,14 +560,14 @@ data (Num a) => Rect2D a = Rect
 
 
 rectTopLeft, rectTopRight, rectBottomLeft, rectBottomRight :: (Num a) => Rect2D a -> Point2 a
-rectTopLeft     (Rect l t w h)  = Point l t
-rectTopRight    (Rect l t w h)  = Point (l+w) t
-rectBottomLeft  (Rect l t w h)  = Point l (t+h)
-rectBottomRight (Rect l t w h)  = Point (l+w) (t+h)
+rectTopLeft     (Rect l t _w _h) = Point l       t
+rectTopRight    (Rect l t w  _h) = Point (l + w) t
+rectBottomLeft  (Rect l t _w h)  = Point l       (t + h)
+rectBottomRight (Rect l t w  h)  = Point (l + w) (t + h)
 
 rectBottom, rectRight :: (Num a) => Rect2D a -> a
-rectBottom (Rect x y w h)  = y + h
-rectRight  (Rect x y w h)  = x + w
+rectBottom (Rect _x y _w h) = y + h
+rectRight  (Rect x _y w _h) = x + w
 
 -- | Create a rectangle at a certain (upper-left) point with a certain size.
 rect :: (Num a) => Point2 a -> Size2D a -> Rect2D a
@@ -563,7 +592,7 @@ rectNull
 
 -- | Get the size of a rectangle.
 rectSize :: (Num a) => Rect2D a -> Size2D a
-rectSize (Rect l t w h)
+rectSize (Rect _l _t w h)
   = Size w h
 
 -- | Create a rectangle of a certain size with the upper-left corner at ('pt' 0 0).
@@ -572,7 +601,7 @@ rectFromSize (Size w h)
   = Rect 0 0 w h
 
 rectIsEmpty :: (Num a, Eq a) => Rect2D a -> Bool
-rectIsEmpty (Rect l t w h)
+rectIsEmpty (Rect _l _t w h)
   = (w==0 && h==0)
 
 
@@ -600,10 +629,10 @@ fromCRect x y w h
   = Rect (fromCInt x) (fromCInt y) (fromCInt w) (fromCInt h)
 
 toCIntRectX, toCIntRectY, toCIntRectW, toCIntRectH :: Rect -> CInt
-toCIntRectX (Rect x y w h)  = toCInt x
-toCIntRectY (Rect x y w h)  = toCInt y
-toCIntRectW (Rect x y w h)  = toCInt w
-toCIntRectH (Rect x y w h)  = toCInt h
+toCIntRectX (Rect  x _y _w _h) = toCInt x
+toCIntRectY (Rect _x  y _w _h) = toCInt y
+toCIntRectW (Rect _x _y  w _h) = toCInt w
+toCIntRectH (Rect _x _y _w  h) = toCInt h
 
 withCRectDouble :: Rect2D Double -> (CDouble -> CDouble -> CDouble -> CDouble -> IO a) -> IO a
 withCRectDouble (Rect x0 y0 x1 y1) f
@@ -627,10 +656,10 @@ fromCRectDouble x y w h
   = Rect (fromCDouble x) (fromCDouble y) (fromCDouble w) (fromCDouble h)
 
 toCDoubleRectX, toCDoubleRectY, toCDoubleRectW, toCDoubleRectH :: Rect2D Double -> CDouble
-toCDoubleRectX (Rect x y w h)  = toCDouble x
-toCDoubleRectY (Rect x y w h)  = toCDouble y
-toCDoubleRectW (Rect x y w h)  = toCDouble w
-toCDoubleRectH (Rect x y w h)  = toCDouble h
+toCDoubleRectX (Rect  x _y _w _h) = toCDouble x
+toCDoubleRectY (Rect _x  y _w _h) = toCDouble y
+toCDoubleRectW (Rect _x _y  w _h) = toCDouble w
+toCDoubleRectH (Rect _x _y _w  h) = toCDouble h
 
 -- marshalling 2
 {-
@@ -640,9 +669,11 @@ type TWxRectObject a  = CWxRectObject a
 data CWxRectObject a  = CWxRectObject
 -}
 
+{-
 withWxRectRef :: String -> Rect -> (Ptr (TWxRect r) -> IO a) -> IO a
 withWxRectRef msg r f
   = withWxRectPtr r $ \p -> withValidPtr msg p f
+-}
 
 withWxRectPtr :: Rect -> (Ptr (TWxRect r) -> IO a) -> IO a
 withWxRectPtr r f
@@ -716,7 +747,9 @@ fromCDouble cd
 {-----------------------------------------------------------------------------------------
   CBool
 -----------------------------------------------------------------------------------------}
+#if __GLASGOW_HASKELL__ < 802
 type CBool  = CInt
+#endif
 
 toCBool :: Bool -> CBool
 toCBool = intToCBool . fromBool
@@ -741,7 +774,7 @@ withStringResult f
        if (len<=0)
         then return ""
         else withCString (replicate (fromCInt len) ' ') $ \cstr ->
-             do f cstr
+             do _ <- f cstr
                 peekCStringLen (cstr,fromCInt len)
 
 withWStringResult :: (Ptr CWchar -> IO CInt) -> IO String
@@ -750,7 +783,7 @@ withWStringResult f
        if (len<=0)
         then return ""
         else withCWString (replicate (fromCInt len) ' ') $ \cstr ->
-             do f cstr
+             do _ <- f cstr
                 peekCWString cstr
 
 {-----------------------------------------------------------------------------------------
@@ -764,7 +797,7 @@ withByteStringResult f
        if (len<=0)
         then return $ BC.pack ""
         else withCString (replicate (fromCInt len) ' ') $ \cstr ->
-             do f cstr
+             do _ <- f cstr
                 B.packCStringLen (cstr,fromCInt len)
 
 withLazyByteStringResult :: (Ptr CChar -> IO CInt) -> IO LB.ByteString
@@ -782,7 +815,7 @@ withArrayStringResult f
        if (len <= 0)
         then return []
         else allocaArray len $ \carr ->
-             do f carr
+             do _ <- f carr
                 arr <- peekArray len carr
                 mapM peekCString arr
 
@@ -794,7 +827,7 @@ withArrayWStringResult f
        if (len <= 0)
         then return []
         else allocaArray len $ \carr ->
-             do f carr
+             do _ <- f carr
                 arr <- peekArray len carr
                 mapM peekCWString arr
 
@@ -806,7 +839,7 @@ withArrayIntResult f
        if (len <= 0)
         then return []
         else allocaArray len $ \carr ->
-             do f carr
+             do _ <- f carr
                 xs <- peekArray len carr
                 return (map fromCInt xs)
 
@@ -817,7 +850,7 @@ withArrayIntPtrResult f
        if (len <= 0)
         then return []
         else allocaArray len $ \carr ->
-             do f carr
+             do _ <- f carr
                 xs <- peekArray len carr
                 return (map fromCIntPtr xs)
 
@@ -828,7 +861,7 @@ withArrayObjectResult f
        if (len <= 0)
         then return []
         else allocaArray len $ \carr ->
-             do f carr
+             do _ <- f carr
                 ps <- peekArray len carr
                 return (map objectFromPtr ps)
 
@@ -840,11 +873,11 @@ withArrayString xs f
   where
     len = length xs
 
-    withCStrings [] cxs f
-      = f (reverse cxs)
-    withCStrings (x:xs) cxs f
-      = withCString x $ \cx ->
-        withCStrings xs (cx:cxs) f
+    withCStrings [] cxs f'
+      = f' (reverse cxs)
+    withCStrings (x':xs') cxs f'
+      = withCString x' $ \cx ->
+        withCStrings xs' (cx:cxs) f'
 
 -- FIXME: factorise with withArrayString
 withArrayWString :: [String] -> (CInt -> Ptr CWString -> IO a) -> IO a
@@ -855,11 +888,11 @@ withArrayWString xs f
   where
     len = length xs
 
-    withCWStrings [] cxs f
-      = f (reverse cxs)
-    withCWStrings (x:xs) cxs f
-      = withCWString x $ \cx ->
-        withCWStrings xs (cx:cxs) f
+    withCWStrings [] cxs f'
+      = f' (reverse cxs)
+    withCWStrings (x':xs') cxs f'
+      = withCWString x' $ \cx ->
+        withCWStrings xs' (cx:cxs) f'
 
 
 withArrayInt :: [Int] -> (CInt -> Ptr CInt -> IO a) -> IO a
@@ -884,7 +917,7 @@ toCChar :: Char -> CChar
 toCChar = castCharToCChar
 
 -- generalised to work with Char and CChar
-withCharResult :: (Num a, Integral a, Show a) => IO a -> IO Char
+withCharResult :: (Integral a, Show a) => IO a -> IO Char
 withCharResult io
   = do x <- io
        if (x < 0)
@@ -916,7 +949,7 @@ toCWchar :: (Num a) => Char -> a
 toCWchar = fromIntegral . fromEnum
 
 
-fromCWchar :: (Num a, Integral a) => a -> Char
+fromCWchar :: Integral a => a -> Char
 fromCWchar = toEnum . fromIntegral
 
 
@@ -945,6 +978,7 @@ ptrCast p
 {-----------------------------------------------------------------------------------------
   Marshalling of classes that are managed
 -----------------------------------------------------------------------------------------}
+{-
 -- | A @Managed a@ is a pointer to an object of type @a@, just like 'Object'. However,
 -- managed objects are automatically deleted when garbage collected. This is used for
 -- certain classes that are not managed by the wxWidgets library, like 'Bitmap's
@@ -987,6 +1021,7 @@ managedIsNull managed
 managedCast :: Managed a -> Managed b
 managedCast fptr
   = castForeignPtr fptr
+-}
 
 
 {-----------------------------------------------------------------------------------------
@@ -1251,14 +1286,14 @@ withManagedStringResult io
        s   <- if (len<=0)
                 then return ""
                 else withCWString (replicate (fromCInt len) ' ') $ \cstr ->
-                     do wxString_GetString wxs cstr
+                     do _ <- wxString_GetString wxs cstr
                         peekCWStringLen (cstr, fromCInt len)
        wxString_Delete wxs
        return s
 
 
 foreign import ccall wxString_Create    :: Ptr CWchar -> IO (Ptr (TWxString a))
-foreign import ccall wxString_CreateLen :: Ptr CWchar -> CInt -> IO (Ptr (TWxString a))
+-- foreign import ccall wxString_CreateLen :: Ptr CWchar -> CInt -> IO (Ptr (TWxString a))
 foreign import ccall wxString_Delete    :: Ptr (TWxString a) -> IO ()
 foreign import ccall wxString_GetString :: Ptr (TWxString a) -> Ptr CWchar -> IO CInt
 foreign import ccall wxString_Length    :: Ptr (TWxString a) -> IO CInt
@@ -1268,28 +1303,15 @@ foreign import ccall wxString_Length    :: Ptr (TWxString a) -> IO CInt
   Color
 -----------------------------------------------------------------------------------------}
 -- | An abstract data type to define colors.
---
---   Note: Haddock 0.8 and 0.9 doesn't support GeneralizedNewtypeDeriving. So, This class
---   doesn't have 'IArray' class's unboxed array instance now. If you want to use this type
---   with unboxed array, you must write code like this.
---
--- > {-# LANGUAGE GeneralizedNewtypeDeriving, StandaloneDeriving, MultiParamTypeClasses #-}
--- > import Graphics.UI.WXCore.WxcTypes
--- > ...
--- > deriving instance IArray UArray Color
---
---   We can't derive 'MArray' class's unboxed array instance this way. This is a bad point
---   of current 'MArray' class definition.
---
 newtype Color = Color Word 
               deriving (Eq, Typeable) -- , IArray UArray) 
 
 instance Show Color where
   showsPrec d c
-    = showParen (d > 0) (showString "rgba(" . shows (colorRed   c) .
-                          showChar   ','    . shows (colorGreen c) .
-                          showChar   ','    . shows (colorBlue  c) .
-                          showChar   ','    . shows (colorAlpha c) .
+    = showParen (d > 0) (showString "rgba(" . shows (colorRed   c :: Int) .
+                          showChar   ','    . shows (colorGreen c :: Int) .
+                          showChar   ','    . shows (colorBlue  c :: Int) .
+                          showChar   ','    . shows (colorAlpha c :: Int) .
                           showChar   ')' )
 
 -- | Create a color from a red\/green\/blue triple.
@@ -1312,25 +1334,25 @@ rgba r g b a = colorRGBA r g b a
 -- | Return an 'Int' where the three least significant bytes contain
 -- the red, green, and blue component of a color.
 intFromColor :: Color -> Int
-intFromColor rgb
-  = let r = colorRed rgb
-        g = colorGreen rgb
-        b = colorBlue rgb
-    in (shiftL (fromIntegral r) 16 .|. shiftL (fromIntegral g) 8 .|. b)
+intFromColor colr
+  = let r = colorRed colr
+        g = colorGreen colr
+        b = colorBlue colr
+    in (shiftL r 16 .|. shiftL g 8 .|. b)
 
 -- | Set the color according to an rgb integer. (see 'rgbIntFromColor').
 colorFromInt :: Int -> Color
-colorFromInt rgb
-  = let r = (shiftR rgb 16) .&. 0xFF
-        g = (shiftR rgb 8) .&. 0xFF
-        b = rgb .&. 0xFF
+colorFromInt colr
+  = let r = (shiftR colr 16) .&. 0xFF
+        g = (shiftR colr 8) .&. 0xFF
+        b = colr .&. 0xFF
     in colorRGB r g b
 
 -- | Return an 'Num' class's numeric representation where the three
 -- least significant the red, green, and blue component of a color.
 fromColor :: (Num a) => Color -> a
-fromColor (Color rgb)
-  = fromIntegral rgb
+fromColor (Color colr)
+  = fromIntegral colr
 
 -- | Set the color according to 'Integral' class's numeric representation.
 -- (see 'rgbaIntFromColor').
@@ -1341,25 +1363,25 @@ toColor
 -- marshalling 1
 -- | Returns a red color component
 colorRed   :: (Num a) => Color -> a
-colorRed   (Color rgba) = fromIntegral ((shiftR rgba 24) .&. 0xFF)
+colorRed   (Color colr) = fromIntegral ((shiftR colr 24) .&. 0xFF)
 
 -- | Returns a green color component
 colorGreen :: (Num a) => Color -> a
-colorGreen (Color rgba) = fromIntegral ((shiftR rgba 16) .&. 0xFF)
+colorGreen (Color colr) = fromIntegral ((shiftR colr 16) .&. 0xFF)
 
 -- | Returns a blue color component
 colorBlue  :: (Num a) => Color -> a
-colorBlue  (Color rgba) = fromIntegral ((shiftR rgba 8) .&. 0xFF)
+colorBlue  (Color colr) = fromIntegral ((shiftR colr 8) .&. 0xFF)
 
 -- | Returns a alpha channel component
 colorAlpha  :: (Num a) => Color -> a
-colorAlpha  (Color rgba) = fromIntegral (rgba .&. 0xFF)
+colorAlpha  (Color colr) = fromIntegral (colr .&. 0xFF)
 
 
 -- | This is an illegal color, corresponding to @nullColour@.
 colorNull :: Color
 colorNull
-  = Color (-1)
+  = Color (maxBound)
 
 {-# DEPRECATED colorOk "Use colorIsOk instead" #-}
 -- | deprecated: use 'colorIsOk' instead.
@@ -1389,8 +1411,8 @@ withManagedColourResult io
        color <- do ok <- colourIsOk pcolour
                    if (ok==0)
                     then return colorNull
-                    else do rgba <- colourGetUnsignedInt pcolour
-                            return (toColor rgba)
+                    else do colr <- colourGetUnsignedInt pcolour
+                            return (toColor colr)
        colourSafeDelete pcolour
        return color
 
@@ -1423,13 +1445,13 @@ colorFromColour c
     do ok <- colourIsOk pcolour
        if (ok==0)
         then return colorNull
-        else do rgba <- colourGetUnsignedInt pcolour
-                return (toColor rgba)
+        else do colr <- colourGetUnsignedInt pcolour
+                return (toColor colr)
 
 
 foreign import ccall "wxColour_CreateEmpty" colourCreate    :: IO (Ptr (TColour a))
-foreign import ccall "wxColour_CreateFromInt" colourCreateFromInt :: CInt -> IO (Ptr (TColour a))
-foreign import ccall "wxColour_GetInt" colourGetInt               :: Ptr (TColour a) -> IO CInt
+-- foreign import ccall "wxColour_CreateFromInt" colourCreateFromInt :: CInt -> IO (Ptr (TColour a))
+-- foreign import ccall "wxColour_GetInt" colourGetInt               :: Ptr (TColour a) -> IO CInt
 foreign import ccall "wxColour_CreateFromUnsignedInt" colourCreateFromUnsignedInt :: Word -> IO (Ptr (TColour a))
 foreign import ccall "wxColour_GetUnsignedInt" colourGetUnsignedInt       :: Ptr (TColour a) -> IO Word
 foreign import ccall "wxColour_SafeDelete" colourSafeDelete   :: Ptr (TColour a) -> IO ()

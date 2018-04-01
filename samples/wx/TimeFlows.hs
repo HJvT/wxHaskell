@@ -30,18 +30,22 @@ timeSpan :: Time
 timeSpan = 1
 
 -- The flowing text
+flowText :: String
 flowText = "Time flows like a river"
 
 -- The font style
+flowFont :: FontStyle
 flowFont = fontSwiss{ _fontSize = 16 }
 
 
 {-------------------------------------------------------------------------
   The gui
 -------------------------------------------------------------------------}
+main :: IO ()
 main
   = start timeFlows
 
+timeFlows :: IO ()
 timeFlows
   = do -- mouse history as list of time/position pairs: is never null!
        vmouseHistory <- varCreate [(0,pt 0 0)]
@@ -60,13 +64,13 @@ timeFlows
        set f        [ layout      := fill $ widget p
                     , clientSize  := sz 300 300       -- initial size
                     ]
-       return ()
 
 {-------------------------------------------------------------------------
   Event handlers
 -------------------------------------------------------------------------}
 -- repaint handler
-onPaint vmouseHistory  dc viewArea
+onPaint :: Var [(Time, Point)] -> DC a -> p -> IO ()
+onPaint vmouseHistory  dc _viewArea
   = do history <- varGet vmouseHistory
        time    <- getTime
        -- draw trace line
@@ -77,9 +81,9 @@ onPaint vmouseHistory  dc viewArea
   where
     drawWord (pos,word)
       = do -- center word
-           sz <- getTextExtent dc word
-           let newX = pointX pos - (sizeW sz `div` 2)
-               newY = pointY pos - (sizeH sz `div` 2)
+           sz_ <- getTextExtent dc word
+           let newX = pointX pos - (sizeW sz_ `div` 2)
+               newY = pointY pos - (sizeH sz_ `div` 2)
            -- and draw it.
            drawText dc word (pt  newX newY) []
 
@@ -100,16 +104,19 @@ onIdle vmouseHistory win
     -- prune the history: only remember time/position pairs up to a certain time span.
     prune time (h:hs)
       = h:takeWhile (after (time-timeSpan)) hs
+    prune _    []
+      = undefined
 
-    after time (t,p)
+    after time (t, _p)
       = time <= t
 
 
 -- mouse drag handler
-onDrag vmouseHistory mousePos
+onDrag :: Var [(Time, b)] -> b -> IO ()
+onDrag vmouseHistory mousePos_
   = do time <- getTime
        -- prepend a new time/position pair
-       varUpdate vmouseHistory ((time,mousePos):)
+       _ <- varUpdate vmouseHistory ((time,mousePos_):)
        return ()
            
 
@@ -119,8 +126,8 @@ onDrag vmouseHistory mousePos
 -- Tuple each word in a string with its historic position, given a mouse
 -- history, a time span, and current time.
 wordPositions :: History -> Time -> Time -> String -> [(Point,String)]
-wordPositions history timeSpan time 
-  = wordPositionsAt history . wordTimes timeSpan time . words 
+wordPositions history timeSpan_ time 
+  = wordPositionsAt history . wordTimes timeSpan_ time . words 
 
 -- Translate time/word pairs to position/word pairs given the mouse position history.
 wordPositionsAt :: History -> [(Time,String)] -> [(Point,String)]
@@ -129,16 +136,17 @@ wordPositionsAt history timedWords
 
 -- | Return the mouse position at a certain time.
 posAtTime :: Time -> History -> Point
-posAtTime time [(t,pos)]    = pos
+posAtTime _time [(_t,pos)]  = pos
 posAtTime time ((t,pos):xs) | t <= time  = pos
                             | otherwise  = posAtTime time xs
+posAtTime _    _            = undefined
 
 -- | Evenly assign times to the words in a string, given a timeSpan and current time.
 wordTimes :: Time -> Time -> [String] -> [(Time,String)]
-wordTimes timeSpan time words
-  = let n     = length words
-        delta = timeSpan / (fromIntegral n)
-    in zip (iterate (\t -> t-delta) time) words
+wordTimes timeSpan_ time words_
+  = let n     = length words_
+        delta = timeSpan_ / (fromIntegral n)
+    in zip (iterate (\t -> t-delta) time) words_
     
 -- Get the current Time
 getTime :: IO Time

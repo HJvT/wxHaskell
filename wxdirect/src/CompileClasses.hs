@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 
 import Data.Time( getCurrentTime )
 import Data.Char( toLower )
-import Data.List( isPrefixOf, sort, sortBy, elemIndex )
+import Data.List( isInfixOf, isPrefixOf, sort, sortBy, elemIndex )
 
 import Types
 import HaskellNames
@@ -105,11 +105,18 @@ compileClassesFile _showIgnore moduleRoot moduleClassTypesName moduleName output
                               , exportsClassClasses
                               , [ "    ) where"
                                 , ""
-                                , "import qualified Data.ByteString as B (ByteString, useAsCStringLen)"
-                                , "import qualified Data.ByteString.Lazy as LB (ByteString, length, unpack)"
-                                , "import System.IO.Unsafe( unsafePerformIO )"
-                                , "import Foreign.C.Types(CInt(..), CWchar(..), CChar(..), CDouble(..))"
-                                , "import " ++ moduleRoot ++ "WxcTypes"
+                                , "import Prelude hiding (id, last, length, lines, max, min, show)"
+                              ]
+                              , if any ("B.ByteString" `isInfixOf`) typeDecls
+                                  then
+                                    [ "import qualified Data.ByteString as B (ByteString, useAsCStringLen)"
+                                    , "import qualified Data.ByteString.Lazy as LB (ByteString, length, unpack)"
+                                    ]
+                                  else []
+                              , if any ("unsafePerformIO" `isInfixOf`) haskellDecls
+                                  then ["import System.IO.Unsafe( unsafePerformIO )"]
+                                  else []
+                              , [ "import " ++ moduleRoot ++ "WxcTypes hiding (rect, rgb, rgba, sz)"
                                 , "import " ++ moduleRoot ++ moduleClassTypesName
                                 , ""
                                 ]
@@ -118,7 +125,8 @@ compileClassesFile _showIgnore moduleRoot moduleClassTypesName moduleName output
            prologue = getPrologue moduleName "class"
                                    (show methodCount ++ " methods for " ++ show classCount ++ " classes.")
                                    inputFiles
-           output  = unlines (ghcoptions ++ prologue ++ export ++ marshalDecls)
+           haddockPrune = ["{-# OPTIONS_HADDOCK prune #-}"]
+           output  = unlines (haddockPrune ++ ghcoptions ++ prologue ++ export ++ marshalDecls)
 
        putStrLn ("generating: " ++ outputFile ++ ".hs")
        writeFileLazy (outputFile ++ ".hs") output

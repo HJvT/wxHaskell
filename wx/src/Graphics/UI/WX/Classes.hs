@@ -1,12 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, DeriveDataTypeable, ScopedTypeVariables #-}
 --------------------------------------------------------------------------------
-{-| Module      :  Classes
-    Copyright   :  (c) Daan Leijen 2003
-    License     :  wxWindows
+{-|
+Module      :  Classes
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-    Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-    Stability   :  provisional
-    Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 This modules defines attributes common to many widgets and
 organizes them into Haskell classes. Look at the instance definitions
@@ -63,13 +64,12 @@ import Graphics.UI.WXCore
 
 import Graphics.UI.WX.Types
 import Graphics.UI.WX.Attributes
-import Graphics.UI.WX.Layout
 
 
 -- | Widgets with a label or text field.
 class Textual w where
   -- | The text of a widget. It is interpreted differently for
-  -- for different widgets, for example, the title of a frame or the content of a
+  -- different widgets, for example, the title of a frame or the content of a
   -- static text control.
   text       :: Attr w String
   appendText :: w -> String -> IO ()
@@ -139,18 +139,18 @@ class Dimensions w where
 
   -- defaults
   outerSize
-    = mapAttr rectSize (\r sz -> rect (rectTopLeft r) sz) area
+    = mapAttr rectSize (\r sz' -> rect (rectTopLeft r) sz') area
   position
-      = mapAttr rectTopLeft (\r pt -> rect pt (rectSize r)) area
+      = mapAttr rectTopLeft (\r pt' -> rect pt' (rectSize r)) area
   area
     = newAttr "area" getArea setArea
     where
       getArea w
-        = do sz <- get w outerSize
-             pt <- get w position
-             return (rect pt sz)
-      setArea w rect
-        = set w [outerSize := rectSize rect, position := rectTopLeft rect]
+        = do sz' <- get w outerSize
+             pt' <- get w position
+             return (rect pt' sz')
+      setArea w rect'
+        = set w [outerSize := rectSize rect', position := rectTopLeft rect']
 
   clientSize
     = outerSize
@@ -188,7 +188,7 @@ class Visible w where
   -- defaults
   visible
     = nullAttr "visible"
-  refresh w
+  refresh _w
     = return ()
 
 -- | Parent widgets.
@@ -237,7 +237,7 @@ class Child w where
 
   -- defaults
   parent
-    = readAttr "parent" (\w -> return objectNull)
+    = readAttr "parent" (\_w -> return objectNull)
 
 
 -- | Widgets that can be closed.
@@ -269,11 +269,6 @@ class Framed w where
 class Able w where
   -- | Enable, or disable, the widget.
   enabled :: Attr w Bool
-
-{-# DEPRECATED enable "Use enabled instead" #-}
--- | Deprecated: use 'enabled' instead
-enable :: Able w => Attr w Bool
-enable = enabled
 
 -- | Widgets with help text.
 class Help w where
@@ -379,7 +374,7 @@ class Sized w where
 class HasDefault w where
   -- | Define a default item as any type deriving from 'Window'. Great care
   --   is required when using this option as you will have to cast the item
-  --   to/from Window() using 'objectCast'. 
+  --   to/from @Window ()@ using 'objectCast'. 
   --   For the common use case where the window in question is a 'Button', 
   --   please use 'defaultButton' as it is typesafe.
   unsafeDefaultItem :: Attr w (Window ())

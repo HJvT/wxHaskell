@@ -8,6 +8,7 @@
 module Main where
 
 import UTF8
+import Paths_samplesTest
 
 import Graphics.UI.WX
 import Graphics.UI.WXCore
@@ -26,14 +27,14 @@ sampler =
     nb  <- notebook pnl []
     --
     sLines <- liftM lines readTestFile
-    let bunchOf label thing =
+    let bunchOf lable thing =
          do p  <- panel nb []
             ws <- mapM (\t -> thing p [ text := t, tooltip := t ]) sLines
-            return $ tab label $ container p $ margin 10 $ column 1 $ map widget ws
-        bunchOfSel label thing =
+            return $ tab lable $ container p $ margin 10 $ column 1 $ map widget ws
+        bunchOfSel lable thing =
          do p <- panel nb []
             w <- thing p [on select ::= logSelect sLines]
-            return $ tab label $ container p $ margin 10 $ widget w
+            return $ tab lable $ container p $ margin 10 $ widget w
     -- manually created tabs
     p1 <- panel nb []
     let for1 thing =
@@ -68,7 +69,7 @@ sampler =
             , hfill $ widget textlog ]
           ]
  where
-    logSelect labels w
+    logSelect _labels w
       = do i <- get w selection
            s <- get w (item i)
            logMessage ("selected index: " ++ show i ++ ": " ++ s)
@@ -81,7 +82,9 @@ hGetBytes h c = allocaArray c $ \p ->
 
 readTestFile :: IO String
 readTestFile =
- do h  <- openBinaryFile testFile ReadMode
+ do
+    testFilePath <- getDataFileName testFile
+    h  <- openBinaryFile testFilePath ReadMode
     hsize <- hFileSize h
     ws <- hGetBytes h $ fromIntegral hsize
     return . fst . decode $ ws

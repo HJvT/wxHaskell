@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------------------
 {-| Module      :  ParseC
     Copyright   :  (c) Daan Leijen 2003
@@ -15,7 +16,9 @@ module ParseC( parseC, readHeaderFile ) where
 import Data.Char( isSpace )
 import Data.List( isPrefixOf )
 import Data.Maybe( isJust )
+#if __GLASGOW_HASKELL__ < 710
 import Data.Functor( (<$>) )
+#endif
 import System.Process( readProcess )
 import System.Environment (lookupEnv)
 import Text.ParserCombinators.Parsec
@@ -49,7 +52,7 @@ readHeaderFile fname =
         "cpp"
         ( includeDirectories ++ 
           [ "-C"              -- Keep the comments
-          , "-DWXC_TYPES_H"   -- Make sure wxc_types.h is not included, 
+          , "-DWXC_TYPES_H"   -- Make sure wxc_types.h is not preprocessed, 
                               -- so the type macros are not replaced 
                               -- (the parser scans for certain macros)
           , fname             -- The file to process

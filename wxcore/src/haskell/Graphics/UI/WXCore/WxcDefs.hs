@@ -1,11 +1,15 @@
---------------------------------------------------------------------------------
-{-| Module      :  WxcDefs
-    Copyright   :  Copyright (c) Daan Leijen 2003, 2004
-    License     :  wxWidgets
 
-    Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-    Stability   :  provisional
-    Portability :  portable
+{-# OPTIONS_HADDOCK prune #-}
+
+--------------------------------------------------------------------------------
+{-| 
+Module      :  WxcDefs
+Copyright   :  Copyright (c) Daan Leijen 2003, 2004
+License     :  wxWidgets
+
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Haskell constant definitions for the wxWidgets C library (@wxc.dll@).
 
@@ -150,37 +154,46 @@ module Graphics.UI.WXCore.WxcDefs
     , wxBDIAGONAL_HATCH
     , wxBEOS
     , wxBIG_ENDIAN
-    , wxBITMAP_TYPE_ANY
+    
+    -- From enum wxBitmapType in wxWidgets/include/wx/gdicmn.h
+    , wxBITMAP_TYPE_INVALID
     , wxBITMAP_TYPE_BMP
     , wxBITMAP_TYPE_BMP_RESOURCE
+    , wxBITMAP_TYPE_RESOURCE
+    , wxBITMAP_TYPE_ICO
+    , wxBITMAP_TYPE_ICO_RESOURCE
     , wxBITMAP_TYPE_CUR
     , wxBITMAP_TYPE_CUR_RESOURCE
-    , wxBITMAP_TYPE_GIF
-    , wxBITMAP_TYPE_GIF_RESOURCE
-    , wxBITMAP_TYPE_ICO
-    , wxBITMAP_TYPE_ICON
-    , wxBITMAP_TYPE_ICON_RESOURCE
-    , wxBITMAP_TYPE_ICO_RESOURCE
-    , wxBITMAP_TYPE_INVALID
-    , wxBITMAP_TYPE_JPEG
-    , wxBITMAP_TYPE_JPEG_RESOURCE
-    , wxBITMAP_TYPE_MACCURSOR
-    , wxBITMAP_TYPE_MACCURSOR_RESOURCE
-    , wxBITMAP_TYPE_PCX
-    , wxBITMAP_TYPE_PCX_RESOURCE
-    , wxBITMAP_TYPE_PICT
-    , wxBITMAP_TYPE_PICT_RESOURCE
-    , wxBITMAP_TYPE_PNG
-    , wxBITMAP_TYPE_PNG_RESOURCE
-    , wxBITMAP_TYPE_PNM
-    , wxBITMAP_TYPE_PNM_RESOURCE
-    , wxBITMAP_TYPE_RESOURCE
-    , wxBITMAP_TYPE_TIF
-    , wxBITMAP_TYPE_TIF_RESOURCE
     , wxBITMAP_TYPE_XBM
     , wxBITMAP_TYPE_XBM_DATA
     , wxBITMAP_TYPE_XPM
     , wxBITMAP_TYPE_XPM_DATA
+    , wxBITMAP_TYPE_TIFF
+    , wxBITMAP_TYPE_TIFF_RESOURCE
+    , wxBITMAP_TYPE_TIF
+    , wxBITMAP_TYPE_TIF_RESOURCE
+    , wxBITMAP_TYPE_GIF
+    , wxBITMAP_TYPE_GIF_RESOURCE
+    , wxBITMAP_TYPE_PNG
+    , wxBITMAP_TYPE_PNG_RESOURCE
+    , wxBITMAP_TYPE_JPEG
+    , wxBITMAP_TYPE_JPEG_RESOURCE
+    , wxBITMAP_TYPE_PNM
+    , wxBITMAP_TYPE_PNM_RESOURCE
+    , wxBITMAP_TYPE_PCX
+    , wxBITMAP_TYPE_PCX_RESOURCE
+    , wxBITMAP_TYPE_PICT
+    , wxBITMAP_TYPE_PICT_RESOURCE
+    , wxBITMAP_TYPE_ICON
+    , wxBITMAP_TYPE_ICON_RESOURCE
+    , wxBITMAP_TYPE_ANI
+    , wxBITMAP_TYPE_IFF
+    , wxBITMAP_TYPE_TGA
+    , wxBITMAP_TYPE_MACCURSOR
+    , wxBITMAP_TYPE_MACCURSOR_RESOURCE
+    , wxBITMAP_TYPE_MAX
+    , wxBITMAP_TYPE_ANY
+    
     , wxBLACK
     , wxBLACK_BRUSH
     , wxBLACK_DASHED_PEN
@@ -268,6 +281,11 @@ module Graphics.UI.WXCore.WxcDefs
     , wxCONFIG_USE_RELATIVE_PATH
     , wxCOPY
     , wxCOSE_X
+    , wxPB_USE_TEXTCTRL
+    , wxPB_SMALL
+    , wxCLRP_USE_TEXTCTRL
+    , wxCLRP_DEFAULT_STYLE
+    , wxCLRP_SHOW_LABEL
     , wxCROSSDIAG_HATCH
     , wxCROSS_HATCH
     , wxCURSES
@@ -554,6 +572,11 @@ module Graphics.UI.WXCore.WxcDefs
     , wxHSCROLL
     , wxHW_SCROLLBAR_AUTO
     , wxHW_SCROLLBAR_NEVER
+    , wxHL_CONTEXTMENU
+    , wxHL_ALIGN_LEFT
+    , wxHL_ALIGN_RIGHT
+    , wxHL_ALIGN_CENTRE
+    , wxHL_DEFAULT_STYLE
     , wxICONIZE
     , wxICON_EXCLAMATION
     , wxICON_HAND
@@ -634,6 +657,12 @@ module Graphics.UI.WXCore.WxcDefs
     , wxIMAGE_LIST_NORMAL
     , wxIMAGE_LIST_SMALL
     , wxIMAGE_LIST_STATE
+    , wxIMAGE_QUALITY_NEAREST
+    , wxIMAGE_QUALITY_BILINEAR
+    , wxIMAGE_QUALITY_BICUBIC
+    , wxIMAGE_QUALITY_BOX_AVERAGE
+    , wxIMAGE_QUALITY_NORMAL
+    , wxIMAGE_QUALITY_HIGH
     , wxINTEGER
     , wxINVERT
     , wxITALIC
@@ -2958,6 +2987,23 @@ wxIMAGE_LIST_SMALL = 1
 wxIMAGE_LIST_STATE :: Int
 wxIMAGE_LIST_STATE = 2
 
+wxIMAGE_QUALITY_NEAREST :: Int
+wxIMAGE_QUALITY_NEAREST = 0
+
+wxIMAGE_QUALITY_BILINEAR :: Int
+wxIMAGE_QUALITY_BILINEAR = 1
+
+wxIMAGE_QUALITY_BICUBIC :: Int
+wxIMAGE_QUALITY_BICUBIC = 2
+
+wxIMAGE_QUALITY_BOX_AVERAGE :: Int
+wxIMAGE_QUALITY_BOX_AVERAGE = 3
+
+wxIMAGE_QUALITY_NORMAL :: Int
+wxIMAGE_QUALITY_NORMAL = 4
+
+wxIMAGE_QUALITY_HIGH :: Int
+wxIMAGE_QUALITY_HIGH = 5
 
 -- wxToolBar style flags
 
@@ -3704,6 +3750,7 @@ wxAUI_TBTOOL_TEXT_BOTTOM :: Int
 wxAUI_TBTOOL_TEXT_BOTTOM =  3
 -- end enum wxAuiToolBarToolTextOrientation
 
+{-
 -- enum for wxBookCtrlHitTest
 wxBK_HITTEST_NOWHERE :: Int
 wxBK_HITTEST_NOWHERE = 1
@@ -3731,6 +3778,7 @@ wxBK_RIGHT = 0x0080
 wxBK_ALIGN_MASK :: Int
 wxBK_ALIGN_MASK = 240
 -- end wxBookCtrl flags
+-}
 
 -- enum wxSizerFlagBits
 
@@ -3767,7 +3815,7 @@ wxTILE :: Int
 wxTILE = wxSHAPED .|. wxFIXED_MINSIZE
 
 -- a mask to extract stretch from the combination of flags
-wxSTRETCH_MASK = 0x7000 -- sans wxTILE
+-- wxSTRETCH_MASK = 0x7000 -- sans wxTILE
 
 -- End enum wxStretch
 
@@ -3808,7 +3856,7 @@ wxSTATIC_BORDER = 16777216
 wxBORDER :: Int
 wxBORDER = 33554432
 
--- | This is different from wxBORDER_NONE as by default the controls do
+-- | This is different from wxBORDER_NONE, as by default the controls do
 -- have border
 wxBORDER_DEFAULT :: Int
 wxBORDER_DEFAULT = 0
@@ -4300,6 +4348,32 @@ wxTEXT_ATTR_LINE_SPACING_TWICE          :: Int
 wxTEXT_ATTR_LINE_SPACING_TWICE          = 20
 
 --End wxTextCtrl style flags
+
+-- PickerBase style flags
+wxPB_USE_TEXTCTRL :: Int
+wxPB_USE_TEXTCTRL = 0x0002
+wxPB_SMALL        :: Int
+wxPB_SMALL        = 0x8000
+
+-- ColourPickerCtrl style flags
+wxCLRP_USE_TEXTCTRL  :: Int
+wxCLRP_USE_TEXTCTRL  = wxPB_USE_TEXTCTRL
+wxCLRP_DEFAULT_STYLE :: Int
+wxCLRP_DEFAULT_STYLE = 0
+wxCLRP_SHOW_LABEL    :: Int
+wxCLRP_SHOW_LABEL    = 0x0008
+
+-- HyperlinkCtrl style flags
+wxHL_CONTEXTMENU   :: Int
+wxHL_CONTEXTMENU   = 0x0001
+wxHL_ALIGN_LEFT    :: Int
+wxHL_ALIGN_LEFT    = 0x0002
+wxHL_ALIGN_RIGHT   :: Int
+wxHL_ALIGN_RIGHT   = 0x0004
+wxHL_ALIGN_CENTRE  :: Int
+wxHL_ALIGN_CENTRE  = 0x0008
+wxHL_DEFAULT_STYLE :: Int
+wxHL_DEFAULT_STYLE = wxHL_CONTEXTMENU.|.wxNO_BORDER.|.wxHL_ALIGN_CENTRE
 
 
 wxPROCESS_ENTER :: Int
@@ -5513,7 +5587,7 @@ wxBITMAP_TYPE_BMP_RESOURCE :: Int
 wxBITMAP_TYPE_BMP_RESOURCE = 2
 
 wxBITMAP_TYPE_RESOURCE :: Int
-wxBITMAP_TYPE_RESOURCE = 2
+wxBITMAP_TYPE_RESOURCE = wxBITMAP_TYPE_BMP_RESOURCE
 
 wxBITMAP_TYPE_ICO :: Int
 wxBITMAP_TYPE_ICO = 3
@@ -5539,11 +5613,17 @@ wxBITMAP_TYPE_XPM = 9
 wxBITMAP_TYPE_XPM_DATA :: Int
 wxBITMAP_TYPE_XPM_DATA = 10
 
+wxBITMAP_TYPE_TIFF :: Int
+wxBITMAP_TYPE_TIFF = 11
+
+wxBITMAP_TYPE_TIFF_RESOURCE :: Int
+wxBITMAP_TYPE_TIFF_RESOURCE = 12
+
 wxBITMAP_TYPE_TIF :: Int
-wxBITMAP_TYPE_TIF = 11
+wxBITMAP_TYPE_TIF = wxBITMAP_TYPE_TIFF
 
 wxBITMAP_TYPE_TIF_RESOURCE :: Int
-wxBITMAP_TYPE_TIF_RESOURCE = 12
+wxBITMAP_TYPE_TIF_RESOURCE = wxBITMAP_TYPE_TIFF_RESOURCE
 
 wxBITMAP_TYPE_GIF :: Int
 wxBITMAP_TYPE_GIF = 13
@@ -5587,11 +5667,23 @@ wxBITMAP_TYPE_ICON = 25
 wxBITMAP_TYPE_ICON_RESOURCE :: Int
 wxBITMAP_TYPE_ICON_RESOURCE = 26
 
+wxBITMAP_TYPE_ANI :: Int
+wxBITMAP_TYPE_ANI = 27
+
+wxBITMAP_TYPE_IFF :: Int
+wxBITMAP_TYPE_IFF = 28
+
+wxBITMAP_TYPE_TGA :: Int
+wxBITMAP_TYPE_TGA = 29
+
 wxBITMAP_TYPE_MACCURSOR :: Int
-wxBITMAP_TYPE_MACCURSOR = 27
+wxBITMAP_TYPE_MACCURSOR = 30
 
 wxBITMAP_TYPE_MACCURSOR_RESOURCE :: Int
-wxBITMAP_TYPE_MACCURSOR_RESOURCE = 28
+wxBITMAP_TYPE_MACCURSOR_RESOURCE = 31
+
+wxBITMAP_TYPE_MAX :: Int
+wxBITMAP_TYPE_MAX = 32
 
 wxBITMAP_TYPE_ANY :: Int
 wxBITMAP_TYPE_ANY = 50
@@ -11093,3 +11185,19 @@ wxSTC_CMD_WORDRIGHTEND = 2441
 wxSTC_CMD_WORDRIGHTENDEXTEND :: Int
 wxSTC_CMD_WORDRIGHTENDEXTEND = 2442
 
+{-
+wxSPLASH_CENTRE_ON_PARENT :: Int
+wxSPLASH_CENTRE_ON_PARENT = 1
+
+wxSPLASH_CENTRE_ON_SCREEN :: Int
+wxSPLASH_CENTRE_ON_SCREEN = 2
+
+wxSPLASH_NO_CENTRE :: Int
+wxSPLASH_NO_CENTRE = 0
+
+wxSPLASH_TIMEOUT :: Int
+wxSPLASH_TIMEOUT = 4
+
+wxSPLASH_NO_TIMEOUT :: Int
+wxSPLASH_NO_TIMEOUT = 0
+-}

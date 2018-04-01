@@ -12,6 +12,8 @@ module Main where
  
 import Graphics.UI.WX
 import Graphics.UI.WXCore
+
+import Paths_samplesContrib
  
 main :: IO ()
 main
@@ -35,10 +37,11 @@ gui
        -- button page
        nb   <- notebookRight p []
        p1   <- panel  nb []
-       ok   <- bitmapButton p1 [picture := "../bitmaps/wxwin16.png",
+       img  <- getDataFileName "bitmaps/wxwin16.png"
+       ok   <- bitmapButton p1 [picture := img,
                                 text := "Ok", on command := logMessage "bitmap button pressed", 
                                 tooltip := "tooltip",
-                                on clickRight := (\pt -> menuPopup file pt p)]
+                                on clickRight := (\pt_ -> menuPopup file pt_ p)]
  
  
        -- specify layout
@@ -54,18 +57,19 @@ gui
                  , on (menu aRightClick) := infoDialog f "Say.." "Something"
              , clientSize := sz 400 300 ]
        return ()
- 
+{- 
   where
     logSelect labels w
       = do i <- get w selection
            s <- get w (item i)
            logMessage ("selected index: " ++ show i ++ ": " ++ s)
-           
- 
+-}
+
 
 -- like notebook, with labels created on the side ( rather than on top): wxNB_RIGHT
-notebookRight parent props 
-  = do nb <- notebookCreate parent idAny rectNull ( wxCLIP_CHILDREN + wxNB_RIGHT)
+notebookRight :: Window a
+                 -> [Prop (Notebook ())] -> IO (Notebook ())
+notebookRight parent_ props 
+  = do nb <- notebookCreate parent_ idAny rectNull ( wxCLIP_CHILDREN + wxNB_RIGHT)
        set nb props
        return nb
-       

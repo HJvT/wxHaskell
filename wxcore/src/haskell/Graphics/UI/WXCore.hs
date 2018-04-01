@@ -1,11 +1,12 @@
 -----------------------------------------------------------------------------------------
-{-|	Module      :  WXCore
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  WXCore
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 The "WXCore" module is the interface to the core wxWidgets functionality.
     
@@ -69,10 +70,10 @@ import Graphics.UI.WXCore.GHCiSupport
 -- from this initialisation action or from event handlers, otherwise bad
 -- things will happen :-)
 run :: IO a -> IO ()
-run init
+run action
   = do enableGUI
        appOnInit (do wxcAppInitAllImageHandlers
-                     init
+                     _ <- action
                      return ())
        performGC
        performGC

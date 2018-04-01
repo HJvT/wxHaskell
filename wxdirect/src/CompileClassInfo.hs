@@ -60,10 +60,10 @@ compileClassInfo _verbose moduleRoot moduleClassesName moduleClassTypesName modu
                                 , "-- | Test if an object is of a certain kind. (Returns also 'True' when the object is null.)"
                                 , "{-# NOINLINE instanceOf #-}"
                                 , "instanceOf :: WxObject b -> ClassType a -> Bool"
-                                , "instanceOf obj (ClassType classInfo) "
+                                , "instanceOf obj (ClassType classInfo') "
                                 , "  = if (objectIsNull obj)"
                                 , "     then True"
-                                , "     else unsafePerformIO (objectIsKindOf obj classInfo)"
+                                , "     else unsafePerformIO (objectIsKindOf obj classInfo')"
                                 , ""
                                 , "-- | Test if an object is of a certain kind, based on a full wxWidgets class name. (Use with care)."
                                 , "{-# NOINLINE instanceOfName #-}"
@@ -72,10 +72,10 @@ compileClassInfo _verbose moduleRoot moduleClassesName moduleClassTypesName modu
                                 , "  = if (objectIsNull obj)"
                                 , "     then True"
                                 , "     else unsafePerformIO ("
-                                , "          do classInfo <- classInfoFindClass className"
-                                , "             if (objectIsNull classInfo)"
+                                , "          do classInfo'   <- classInfoFindClass className"
+                                , "             if (objectIsNull classInfo')"
                                 , "              then return False" 
-                                , "              else objectIsKindOf obj classInfo)"
+                                , "              else objectIsKindOf obj classInfo')"
                                 , ""
                                 , "-- | A safe object cast. Returns 'Nothing' if the object is of the wrong type. Note that a null object can always be cast."
                                 , "safeCast :: WxObject b -> ClassType (WxObject a) -> Maybe (WxObject a)"
@@ -105,9 +105,10 @@ compileClassInfo _verbose moduleRoot moduleClassesName moduleClassTypesName modu
                               ]
            prologue = getPrologue moduleName "class info"
                                         (show defCount ++ " class info definitions.") []
+           haddockPrune = ["{-# OPTIONS_HADDOCK prune #-}"]
 
        putStrLn ("generating: " ++ outputFile)
-       writeFileLazy outputFile (unlines (prologue ++ export ++ classDefs ++ downcDefs))
+       writeFileLazy outputFile (unlines (haddockPrune ++ prologue ++ export ++ classDefs ++ downcDefs))
        putStrLn ("generated " ++ show defCount ++ " class info definitions")
        putStrLn "ok."
 

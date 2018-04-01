@@ -1,11 +1,12 @@
 -----------------------------------------------------------------------------------------
-{-|	Module      :  Frame
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  Frame
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Frame utility functions.
 -}
@@ -37,7 +38,6 @@ import Graphics.UI.WXCore.WxcTypes
 import Graphics.UI.WXCore.WxcDefs
 import Graphics.UI.WXCore.WxcClassInfo
 import Graphics.UI.WXCore.WxcClasses
-import Graphics.UI.WXCore.WxcClassTypes
 import Graphics.UI.WXCore.Types
 
 
@@ -131,7 +131,7 @@ windowChildren w
        if count <= 0
         then return []
         else withArray (replicate count ptrNull) $ \ptrs ->
-             do windowGetChildren w ptrs count
+             do _  <- windowGetChildren w ptrs count
                 ps <- peekArray count ptrs
                 return (map objectFromPtr ps)
 

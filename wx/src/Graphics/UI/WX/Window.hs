@@ -2,13 +2,14 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 --------------------------------------------------------------------------------
-{-|	Module      :  Window
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  Window
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
 
 Exports default instances for generic windows.
 
@@ -32,7 +33,6 @@ import Graphics.UI.WXCore
 
 import Graphics.UI.WX.Types
 import Graphics.UI.WX.Attributes
-import Graphics.UI.WX.Layout
 import Graphics.UI.WX.Classes
 import Graphics.UI.WX.Events
 
@@ -49,11 +49,11 @@ import Graphics.UI.WX.Events
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 --
 scrolledWindow :: Window a -> [Prop (ScrolledWindow ())] -> IO (ScrolledWindow ())
-scrolledWindow parent props
-  = feed2 props 0 $
-    initialContainer $ \id rect -> \props style ->
-    do sw <- scrolledWindowCreate parent id rect style
-       set sw props
+scrolledWindow parent_ props_
+  = feed2 props_ 0 $
+    initialContainer $ \id_ rect_ -> \props_' style_ ->
+    do sw <- scrolledWindowCreate parent_ id_ rect_ style_
+       set sw props_'
        return sw
 
 
@@ -67,8 +67,8 @@ scrollRate
       = do p <- scrolledWindowGetScrollPixelsPerUnit sw
            return (sizeFromPoint p)
      
-    setter sw size
-      = scrolledWindowSetScrollRate sw (sizeW size) (sizeH size)
+    setter sw size_
+      = scrolledWindowSetScrollRate sw (sizeW size_) (sizeH size_)
 
 
 {--------------------------------------------------------------------------------
@@ -81,11 +81,11 @@ scrollRate
 -- * Instances: 'Textual', 'Literate', 'Dimensions', 'Colored', 'Visible', 'Child', 
 --             'Able', 'Tipped', 'Identity', 'Styled', 'Reactive', 'Paint'.
 window :: Window a -> [Prop (Window ())] -> IO (Window ())
-window parent props
-  = feed2 props 0 $
-    initialWindow $ \id rect -> \props flags ->
-    do w <- windowCreate parent id rect flags
-       set w props
+window parent_ props_
+  = feed2 props_ 0 $
+    initialWindow $ \id_ rect_ -> \props_' flags ->
+    do w <- windowCreate parent_ id_ rect_ flags
+       set w props_'
        return w
 
 
@@ -96,20 +96,20 @@ window parent props
 -- |identity|, |style|, and |area| (or |position| and |outerSize|).
 initialWindow :: (Id -> Rect -> [Prop (Window w)] -> Style -> a) -> [Prop (Window w)] -> Style -> a
 initialWindow cont 
-  = initialIdentity $ \id ->
-    initialArea     $ \rect ->
+  = initialIdentity $ \id_ ->
+    initialArea     $ \rect_ ->
     initialStyle    $ 
     initialBorder   $
-    cont id rect 
+    cont id_ rect_ 
 
 -- | Helper function that retrieves initial window settings, including |clipChildren|
 -- and |fullRepaintOnResize|.
 initialContainer :: (Id -> Rect -> [Prop (Window w)] -> Style -> a) -> [Prop (Window w)] -> Style -> a
 initialContainer cont
-  = initialWindow $ \id rect ->
+  = initialWindow $ \id_ rect_ ->
     initialFullRepaintOnResize $ 
     initialClipChildren        $ 
-    cont id rect 
+    cont id_ rect_ 
 
 
 instance Able (Window a) where
@@ -132,7 +132,7 @@ instance Textual (Window a) where
 
       getset w
         = ifInstanceOf w classComboBox
-            (\cb -> (comboBoxGetValue cb, \s -> do comboBoxClear cb; comboBoxAppend cb s)) $
+            (\cb -> (comboBoxGetValue cb, comboBoxSetValue cb)) $
           ifInstanceOf w classTextCtrl
             (\tc -> (textCtrlGetValue tc, \s -> do textCtrlChangeValue tc s)) $
             (windowGetLabel w,windowSetLabel w)
@@ -147,22 +147,22 @@ instance Textual (Window a) where
 
 -- | Retrieve the initial title from the |text| attribute.
 initialText :: Textual w => (String -> [Prop w] -> a) -> [Prop w] -> a
-initialText cont props 
-  = withProperty text "" cont props
+initialText cont props_ 
+  = withProperty text "" cont props_
 
 
 instance Dimensions (Window a) where
   outerSize
     = newAttr "size" windowGetSize setSize
     where
-      setSize w sz
-        = windowSetSize w (rect (pt (-1) (-1)) sz) wxSIZE_USE_EXISTING
+      setSize w sz_
+        = windowSetSize w (rect (pt (-1) (-1)) sz_) wxSIZE_USE_EXISTING
 
   area
     = newAttr "area" windowGetRect setArea
     where
-      setArea w rect
-        = windowSetSize w rect wxSIZE_USE_EXISTING
+      setArea w rect_
+        = windowSetSize w rect_ wxSIZE_USE_EXISTING
 
   bestSize
     = readAttr "bestSize" windowGetEffectiveMinSize
@@ -183,26 +183,26 @@ instance Sized (Window a) where
 -- | Retrieve the initial creation area from the |area|, or the |position| and
 -- |outerSize| properties.
 initialArea :: Dimensions w => (Rect -> [Prop w] -> a) -> [Prop w] -> a
-initialArea cont props
-  = case findProperty area rectNull props of
-      Just (rect,props') -> cont rect props'
+initialArea cont props_
+  = case findProperty area rectNull props_ of
+      Just (rect_,props') -> cont rect_ props'
       Nothing 
-        -> case findProperty position pointNull props of
-             Just (p,props') -> case findProperty outerSize sizeNull props of
-                                  Just (sz,props'') -> cont (rect p sz) props''
+        -> case findProperty position pointNull props_ of
+             Just (p,props') -> case findProperty outerSize sizeNull props_ of
+                                  Just (sz_,props'') -> cont (rect p sz_) props''
                                   Nothing           -> cont (rect p sizeNull) props'
-             Nothing         -> case findProperty outerSize sizeNull props of
-                                  Just (sz,props')  -> cont (rect pointNull sz) props'
-                                  Nothing           -> cont rectNull props
+             Nothing         -> case findProperty outerSize sizeNull props_ of
+                                  Just (sz_,props')  -> cont (rect pointNull sz_) props'
+                                  Nothing           -> cont rectNull props_
 
 
 
 instance Colored (Window a) where
   bgcolor
-    = newAttr "bgcolor" windowGetBackgroundColour (\w x -> do{ windowSetBackgroundColour w x; return ()})
+    = newAttr "bgcolor" windowGetBackgroundColour (\w x -> do _ <- windowSetBackgroundColour w x; return ())
 
   color
-    = newAttr "color" windowGetForegroundColour (\w x -> do windowSetForegroundColour w x; return ())
+    = newAttr "color"   windowGetForegroundColour (\w x -> do _ <- windowSetForegroundColour w x; return ())
 
 
 instance Literate (Window a) where
@@ -228,10 +228,10 @@ instance Literate (Window a) where
                                  (textAttrDelete)
                                  (\attr -> withFontStyle info $ \fnt ->
                                            do textAttrSetFont attr fnt
-                                              textCtrlSetDefaultStyle textCtrl attr
+                                              _ <- textCtrlSetDefaultStyle textCtrl attr
                                               return ()))
            (withFontStyle info $ \fnt ->
-            do windowSetFont w fnt
+            do _ <- windowSetFont w fnt
                return ())
 
   textColor
@@ -250,8 +250,8 @@ instance Literate (Window a) where
         = ifInstanceOf w classTextCtrl
            (\textCtrl -> bracket (textAttrCreateDefault)
                                  (textAttrDelete)
-                                 (\attr -> do textAttrSetTextColour attr c
-                                              textCtrlSetDefaultStyle textCtrl attr
+                                 (\attr -> do _ <- textAttrSetTextColour attr c
+                                              _ <- textCtrlSetDefaultStyle textCtrl attr
                                               return ()))
            (set w [color := c])
 
@@ -272,7 +272,7 @@ instance Literate (Window a) where
            (\textCtrl -> bracket (textAttrCreateDefault)
                                  (textAttrDelete)
                                  (\attr -> do textAttrSetBackgroundColour attr c
-                                              textCtrlSetDefaultStyle textCtrl attr
+                                              _ <- textCtrlSetDefaultStyle textCtrl attr
                                               return ()))
            (set w [bgcolor := c])
 
@@ -284,7 +284,7 @@ instance Visible (Window a) where
     where
       setVisible w vis
         = if vis
-           then do{ windowShow w; windowRaise w }
+           then do{ _ <- windowShow w; windowRaise w }
            else unitIO (windowHide w)
 
   refresh w
@@ -297,8 +297,8 @@ instance Visible (Window a) where
         = do s <- get w style
              return (not (bitsSet wxNO_FULL_REPAINT_ON_RESIZE s))
 
-      setFlag w repaint
-        = set w [style :~ \stl -> if repaint 
+      setFlag w repaint_
+        = set w [style :~ \stl -> if repaint_ 
                                    then stl .-. wxNO_FULL_REPAINT_ON_RESIZE 
                                    else stl .+. wxNO_FULL_REPAINT_ON_RESIZE]
 
@@ -340,7 +340,7 @@ instance Child (Window a) where
 
 -- | Ensure that a widget is refitted inside a window when
 -- its size changes, for example when the 'text' of a 
--- 'staticText' control changes. (calls 'windowReFit')
+-- 'staticText' control changes. (Calls 'windowReFit')
 refit :: Window a -> IO ()
 refit w
   = windowReFit w
@@ -348,7 +348,7 @@ refit w
 -- | Ensure that a widget is refitted inside a window when
 -- its size changes, for example when the 'text' of a 
 -- 'staticText' control changes. Always resizes the
--- window to its minimal acceptable size. (calls 'windowReFitMinimal')
+-- window to its minimal acceptable size. (Calls 'windowReFitMinimal')
 refitMinimal :: Window a -> IO ()
 refitMinimal w
   = windowReFitMinimal w
@@ -391,8 +391,8 @@ instance Styled (Window a) where
 
 -- | Helper function that retrieves the initial |style|.
 initialStyle :: Styled w => ([Prop w] -> Style -> a) -> [Prop w] -> Style -> a
-initialStyle cont props stl
-  = withProperty style stl (\stl' props' -> cont props' stl') props
+initialStyle cont props_ stl
+  = withProperty style stl (\stl' props' -> cont props' stl') props_
 
 instance Tipped (Window a) where
   tooltip
@@ -417,11 +417,13 @@ instance Bordered (Window a) where
       setter w b
         = set w [style :~ \stl -> setBitMask b stl]
 
-initialBorder cont props style
-  = case filterProperty border props of
-      (PropValue x, ps)  -> cont ps (setBitMask x style) 
-      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style)) style)
-      (PropNone, ps)     -> cont ps style
+initialBorder :: Bordered w =>
+                 ([Prop w] -> Int -> p) -> [Prop w] -> Int -> p
+initialBorder cont props_ style_
+  = case filterProperty border props_ of
+      (PropValue x, ps)  -> cont ps (setBitMask x style_) 
+      (PropModify f, ps) -> cont ps (setBitMask (f (fromBitMask style_)) style_)
+      (PropNone, ps)     -> cont ps style_
 
 {--------------------------------------------------------------------------------
   Events

@@ -39,6 +39,9 @@
 #include "previewframe.h"
 #include "printout.h"
 #include "textstream.h"
+#include "stream.h"
+#include "hyperlinkctrl.h"
+#include "pickerctrl.h"
 #include "stc.h"
 
 /*-----------------------------------------------------------------------------
@@ -310,7 +313,7 @@ int wxInputSinkEvent_LastRead( TSelf(wxInputSinkEvent) obj );
 char* wxInputSinkEvent_LastInput( TSelf(wxInputSinkEvent) obj );
 
 
-/* html events */
+/* HTML events */
 TClassDefExtend(wxcHtmlEvent,wxCommandEvent)
 
 TClass(wxMouseEvent) wxcHtmlEvent_GetMouseEvent( TSelf(wxcHtmlEvent) self );
@@ -325,7 +328,7 @@ TClass(wxString)     wxcHtmlEvent_GetHref( TSelf(wxcHtmlEvent) self );
 TClass(wxString)     wxcHtmlEvent_GetTarget( TSelf(wxcHtmlEvent) self );
 TClass(wxPoint)      wxcHtmlEvent_GetLogicalPosition( TSelf(wxcHtmlEvent) self );
 
-/* html window */
+/* HTML window */
 TClassDefExtend(wxcHtmlWindow,wxHtmlWindow)
 TClass(wxcHtmlWindow) wxcHtmlWindow_Create( TClass(wxWindow) _prt, int _id, TRect(_lft,_top,_wdt,_hgt), int _stl, TClass(wxString) _txt );
 
@@ -383,7 +386,9 @@ void       wxLog_Flush( TSelf(wxLog) _obj );
 void       wxLog_FlushActive( TSelf(wxLog) _obj );
 TClass(wxLog)  wxLog_GetActiveTarget(  );
 char*      wxLog_GetTimestamp( TSelf(wxLog) _obj );
+#if !wxCHECK_VERSION(3, 1, 0)
 int        wxLog_GetTraceMask( TSelf(wxLog) _obj );
+#endif
 int        wxLog_GetVerbose( TSelf(wxLog) _obj );
 TBool      wxLog_HasPendingMessages( TSelf(wxLog) _obj );
 TBool      wxLog_IsAllowedTraceMask( TSelf(wxLog) _obj, TClass(wxMask) mask );

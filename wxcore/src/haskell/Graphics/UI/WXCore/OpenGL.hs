@@ -1,11 +1,12 @@
 --------------------------------------------------------------------------------
-{-|	Module      :  OpenGL
-	Copyright   :  (c) Daan Leijen 2003
-	License     :  wxWindows
+{-|
+Module      :  OpenGL
+Copyright   :  (c) Daan Leijen 2003
+License     :  wxWindows
 
-	Maintainer  :  wxhaskell-devel@lists.sourceforge.net
-	Stability   :  provisional
-	Portability :  portable
+Maintainer  :  wxhaskell-devel@lists.sourceforge.net
+Stability   :  provisional
+Portability :  portable
   
 Convenience wrappers for the openGL canvas window ('GLCanvas').
 -}
@@ -21,14 +22,10 @@ module Graphics.UI.WXCore.OpenGL
 
 
 import Graphics.UI.WXCore.WxcTypes
-import Graphics.UI.WXCore.WxcDefs
 import Graphics.UI.WXCore.WxcClasses
 import Graphics.UI.WXCore.Types
 
 import Foreign
-import Foreign.Ptr
-import Foreign.C.String
-import Foreign.Marshal.Array
 
 
 
@@ -49,10 +46,10 @@ data GLAttribute
   | GL_MIN_ALPHA Int       -- ^ Use alpha buffer with at least /argument/ bits
   | GL_DEPTH_SIZE Int      -- ^ Bits for Z-buffer (0,16,32)  
   | GL_STENCIL_SIZE Int    -- ^ Bits for stencil buffer  
-  | GL_MIN_ACCUM_RED Int   -- ^ Use red accum buffer with at least /argument/ bits 
-  | GL_MIN_ACCUM_GREEN Int -- ^ Use green buffer with at least /argument/ bits 
-  | GL_MIN_ACCUM_BLUE Int  -- ^ Use blue buffer with at least /argument/ bits 
-  | GL_MIN_ACCUM_ALPHA Int -- ^ Use blue buffer with at least /argument/ bits 
+  | GL_MIN_ACCUM_RED Int   -- ^ Use red accumulation buffer with at least /argument/ bits 
+  | GL_MIN_ACCUM_GREEN Int -- ^ Use green accumulation buffer with at least /argument/ bits 
+  | GL_MIN_ACCUM_BLUE Int  -- ^ Use blue accumulation buffer with at least /argument/ bits 
+  | GL_MIN_ACCUM_ALPHA Int -- ^ Use alpha accumulation buffer with at least /argument/ bits 
   | GL_SAMPLE_BUFFERS Int  -- ^ 1 for multisampling support (antialiasing)
   | GL_SAMPLES Int         -- ^ 4 for 2x2 antialiasing supersampling on most graphics cards
   | GL_CORE_PROFILE        -- ^ request an OpenGL core profile. This will result in also requesting OpenGL at least version 3.0, since wx 3.1
@@ -63,11 +60,12 @@ encodeAttributes :: [GLAttribute] -> [Int]
 encodeAttributes attributes
   = concatMap encodeAttribute attributes
 
+encodeAttribute :: GLAttribute -> [Int]
 encodeAttribute attr
   = case attr of
       GL_RGBA                -> [1]
       GL_BUFFER_SIZE n       -> [2,n]
-      GL_LEVEL n             -> [3,case n of { GT -> 1; LT -> (-1); other -> 0 }]
+      GL_LEVEL n             -> [3, case n of { GT -> 1; LT -> (-1); _other -> 0 }]
       GL_DOUBLEBUFFER        -> [4]
       GL_STEREO              -> [5]
       GL_AUX_BUFFERS n       -> [6,n]
@@ -94,6 +92,6 @@ glCanvasCreateDefault parent style title attrs
 
 -- | Create an openGL window. Use 'nullPalette' to use the default palette.
 glCanvasCreateEx :: Window a -> Id -> Rect -> Style -> String -> [GLAttribute] -> Palette b -> IO (GLCanvas ())
-glCanvasCreateEx parent id rect style title attributes palette
+glCanvasCreateEx parent id' rect' style title attributes palette
   = withArray0 (toCInt 0) (map toCInt (encodeAttributes attributes)) $ \pattrs ->
-    glCanvasCreate parent id pattrs rect style title palette
+    glCanvasCreate parent id' pattrs rect' style title palette
